@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Activity, Lock, User, Eye, EyeOff } from 'lucide-react-native';
+import { authService, getUserData } from '../../src/services/api';
 
 interface LoginScreenProps {
   onLogin: (userType: 'admin' | 'student') => void;
@@ -12,12 +13,34 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = () => {
-    if (username && password) {
-      onLogin('admin');
-    } else {
+  const handleSubmit = async () => {
+    if (!username || !password) {
       setError('Please enter both username and password');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      // Call backend API
+      const response = await authService.login({ username, password });
+      
+      // Get user data from storage
+      const userData = await getUserData();
+      
+      // Determine user type based on role
+      const userType = userData?.role === 'ADMIN' ? 'admin' : 'student';
+      
+      // Call onLogin callback with user type
+      onLogin(userType);
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please check your credentials.');
+      console.error('Login error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -102,20 +125,25 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
 
           {/* Login Button */}
           <TouchableOpacity
-            style={styles.loginButton}
+            style={[styles.loginButton, loading && styles.loginButtonDisabled]}
             onPress={handleSubmit}
             activeOpacity={0.8}
+            disabled={loading}
           >
-            <Text style={styles.loginButtonText}>Sign In</Text>
+            {loading ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text style={styles.loginButtonText}>Sign In</Text>
+            )}
           </TouchableOpacity>
 
-          {/* Student Login Link */}
-          <TouchableOpacity
+          {/* Student Login Link - Disabled during development */}
+          {/* <TouchableOpacity
             style={styles.studentLink}
             onPress={() => onLogin('student')}
           >
             <Text style={styles.studentLinkText}>Student Login →</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
 
         {/* Footer */}
@@ -247,6 +275,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 8,
+  },
+  loginButtonDisabled: {
+    backgroundColor: '#9ca3af',
   },
   loginButtonText: {
     fontSize: 16,

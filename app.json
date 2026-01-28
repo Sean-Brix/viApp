@@ -15,14 +15,26 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.sfmnhs.viapp"
+      "bundleIdentifier": "com.sfmnhs.viapp",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "This app needs access to Bluetooth to connect to your health monitoring device and sync your vitals.",
+        "NSBluetoothPeripheralUsageDescription": "This app needs access to Bluetooth to communicate with your health monitoring device."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#14b8a6",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
-      "package": "com.sfmnhs.viapp"
+      "package": "com.sfmnhs.viapp",
+      "permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "output": "static",
@@ -34,6 +46,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "94944d87-c414-4cdf-8680-e3f7f63b33cf"
+      }
     }
   }
 }

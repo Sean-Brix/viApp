@@ -1,33 +1,75 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { AlertTriangle, ChevronLeft } from 'lucide-react-native';
-import { Alert } from '../types';
+import { studentService, adminService } from '../../src/services/api';
 
 interface AlertsScreenProps {
-  alerts: Alert[];
   onBack?: () => void;
+  userType: 'admin' | 'student';
 }
 
-export function AlertsScreen({ alerts, onBack }: AlertsScreenProps) {
+export function AlertsScreen({ onBack, userType }: AlertsScreenProps) {
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    loadAlerts();
+  }, []);
+
+  const loadAlerts = async () => {
+    try {
+      setLoading(true);
+      if (userType === 'admin') {
+        const data = await adminService.getAllAlerts(1, 50);
+        setAlerts(data);
+      } else {
+        const data = await studentService.getAlerts(1, 50);
+        setAlerts(data);
+      }
+    } catch (error) {
+      console.error('Failed to load alerts:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadAlerts();
+  };
+
   const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'high':
+    switch (severity.toUpperCase()) {
+      case 'CRITICAL':
         return { bg: '#fee2e2', border: '#fecaca', text: '#991b1b' };
-      case 'medium':
+      case 'WARNING':
         return { bg: '#fef3c7', border: '#fde68a', text: '#92400e' };
-      case 'low':
+      case 'INFO':
         return { bg: '#dbeafe', border: '#bfdbfe', text: '#1e40af' };
       default:
         return { bg: '#f3f4f6', border: '#e5e7eb', text: '#374151' };
     }
   };
 
-  const formatTime = (date: Date) => {
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
     const diff = Math.round((Date.now() - date.getTime()) / 1000);
     if (diff < 60) return `${diff}s ago`;
     if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
-    return `${Math.round(diff / 3600)}h ago`;
+    if (diff < 86400) return `${Math.round(diff / 3600)}h ago`;
+    return `${Math.round(diff / 86400)}d ago`;
   };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#0d9488" />
+        <Text style={styles.loadingText}>Loading alerts...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -45,43 +87,61 @@ export function AlertsScreen({ alerts, onBack }: AlertsScreenProps) {
       </View>
 
       {/* Alerts List */}
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.alertsContainer}>
-        {alerts.map((alert) => {
-          const colors = getSeverityColor(alert.severity);
-          return (
-            <View
-              key={alert.id}
-              style={[
-                styles.alertCard,
-                { backgroundColor: colors.bg, borderColor: colors.border },
-              ]}
-            >
-              <View style={styles.alertHeader}>
-                <AlertTriangle size={20} color={colors.text} />
-                <Text style={[styles.alertTime, { color: colors.text }]}>
-                  {formatTime(alert.timestamp)}
-                </Text>
-              </View>
-
-              <Text style={styles.studentName}>{alert.studentName}</Text>
-              <Text style={styles.vitalSign}>{alert.vitalSign}</Text>
-              <Text style={styles.message}>{alert.message}</Text>
-
-              <View style={[styles.severityBadge, { backgroundColor: colors.text }]}>
-                <Text style={styles.severityText}>
-                  {alert.severity.toUpperCase()} PRIORITY
-                </Text>
-              </View>
-            </View>
-          );
-        })}
-
-        {alerts.length === 0 && (
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.alertsContainer}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {alerts.length === 0 ? (
           <View style={styles.emptyState}>
-            <AlertTriangle size={48} color="#d1d5db" />
-            <Text style={styles.emptyText}>No active alerts</Text>
-            <Text style={styles.emptySubtext}>All students are stable</Text>
+            <AlertTriangle size={64} color="#d1d5db" />
+            <Text style={styles.emptyText}>No alerts at this time</Text>
+            <Text style={styles.emptySubtext}>
+              {userType === 'admin' 
+                ? 'All students are doing well!' 
+                : 'You\'re doing great! Keep it up!'}
+            </Text>
           </View>
+        ) : (
+          alerts.map((alert) => {
+            const colors = getSeverityColor(alert.severity);
+            return (
+              <View
+                key={alert.id}
+                style={[
+                  styles.alertCard,
+                  { backgroundColor: colors.bg, borderColor: colors.border },
+                ]}
+              >
+                <View style={styles.alertHeader}>
+                  <AlertTriangle size={20} color={colors.text} />
+                  <Text style={[styles.alertTime, { color: colors.text }]}>
+                    {formatTime(alert.createdAt)}
+                  </Text>
+                </View>
+
+                {userType === 'admin' && alert.student && (
+                  <Text style={styles.studentName}>
+                    {alert.student.firstName} {alert.student.lastName}
+                  </Text>
+                )}
+                
+                <Text style={styles.vitalSign}>{alert.type}</Text>
+                <Text style={styles.message}>{alert.message}</Text>
+
+                <View style={styles.alertFooter}>
+                  <View style={[styles.severityBadge, { backgroundColor: colors.text }]}>
+                    <Text style={styles.severityText}>{alert.severity} PRIORITY</Text>
+                  </View>
+                  <Text style={styles.resolvedText}>
+                    {alert.resolved ? 'Resolved' : 'Active'}
+                  </Text>
+                </View>
+              </View>
+            );
+          })
         )}
       </ScrollView>
     </View>
@@ -92,6 +152,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f9fafb',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6b7280',
   },
   header: {
     flexDirection: 'row',
@@ -171,6 +242,11 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 12,
   },
+  alertFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   severityBadge: {
     alignSelf: 'flex-start',
     paddingHorizontal: 10,
@@ -181,6 +257,11 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 11,
     fontWeight: '700',
+  },
+  resolvedText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6b7280',
   },
   emptyState: {
     alignItems: 'center',
