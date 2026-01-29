@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Modal,
+  TextInput,
 } from 'react-native';
 import {
   ChevronLeft,
@@ -23,8 +25,14 @@ import {
   MapPin,
   Smartphone,
   AlertTriangle,
+  FileText,
+  Plus,
+  Edit,
+  Trash2,
+  X,
 } from 'lucide-react-native';
 import { adminService } from '../../src/services/api';
+import { websocketService } from '../../src/services/websocket';
 
 interface AdminStudentDetailsProps {
   studentId: string;
@@ -35,9 +43,57 @@ export function AdminStudentDetails({ studentId, onBack }: AdminStudentDetailsPr
   const [student, setStudent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [medicalHistory, setMedicalHistory] = useState<any[]>([]);
+  const [showAddMedical, setShowAddMedical] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [tempDate, setTempDate] = useState({ year: '2024', month: '01', day: '01' });
+  const [editingRecord, setEditingRecord] = useState<any>(null);
+  const [medicalForm, setMedicalForm] = useState({
+    type: 'CONDITION',
+    description: '',
+    diagnosedAt: new Date().toISOString().split('T')[0], // Default to today
+    notes: '',
+  });
+
+  const medicalTypes = ['CONDITION', 'INJURY', 'MEDICATION', 'ALLERGY'];
 
   useEffect(() => {
     loadStudentDetails();
+    loadMedicalHistory();
+
+    // Subscribe to real-time vital signs updates
+    const unsubscribeVitals = websocketService.onVitalSignsUpdate((data) => {
+      // Only update if this is for the current student
+      if (data.studentId === studentId) {
+        console.log('📊 Real-time vital signs update for student:', studentId);
+        // Update the student's latest vital signs
+        setStudent((prevStudent: any) => {
+          if (!prevStudent) return prevStudent;
+          
+          return {
+            ...prevStudent,
+            vitalSigns: data.data ? [data.data, ...(prevStudent.vitalSigns || [])] : prevStudent.vitalSigns,
+          };
+        });
+      }
+    });
+
+    // Subscribe to real-time alerts
+    const unsubscribeAlerts = websocketService.onAlert((data) => {
+      if (data.studentId === studentId) {
+        console.log('🚨 Real-time alert for student:', studentId);
+        // Optionally show an alert notification
+        Alert.alert('New Alert', `Alert received for ${student?.firstName || 'student'}`);
+        // Reload to get updated alerts
+        loadStudentDetails();
+      }
+    });
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      unsubscribeVitals();
+      unsubscribeAlerts();
+    };
   }, [studentId]);
 
   const loadStudentDetails = async () => {
@@ -54,9 +110,110 @@ export function AdminStudentDetails({ studentId, onBack }: AdminStudentDetailsPr
     }
   };
 
+  const loadMedicalHistory = async () => {
+    try {
+      const history = await adminService.getMedicalHistory(studentId);
+      setMedicalHistory(history);
+    } catch (error: any) {
+      console.error('Failed to load medical history:', error);
+    }
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
     loadStudentDetails();
+    loadMedicalHistory();
+  };
+
+  const handleAddMedical = async () => {
+    if (!medicalForm.description.trim()) {
+      Alert.alert('Error', 'Please enter a description');
+      return;
+    }
+
+    try {
+      if (editingRecord) {
+        // Update existing record
+        await adminService.updateMedicalHistory(editingRecord.id, {
+          type: medicalForm.type,
+          description: medicalForm.description.trim(),
+          diagnosedAt: medicalForm.diagnosedAt,
+          notes: medicalForm.notes.trim() || undefined,
+        });
+        Alert.alert('Success', 'Medical history updated successfully');
+      } else {
+        // Add new record - use today's date if not set
+        const diagnosedDate = medicalForm.diagnosedAt || new Date().toISOString().split('T')[0];
+        await adminService.addMedicalHistory(studentId, {
+          type: medicalForm.type,
+          description: medicalForm.description.trim(),
+          diagnosedAt: diagnosedDate,
+          notes: medicalForm.notes.trim() || undefined,
+        });
+        Alert.alert('Success', 'Medical history added successfully');
+      }
+      
+      setShowAddMedical(false);
+      setEditingRecord(null);
+      setMedicalForm({ 
+        type: 'CONDITION', 
+        description: '', 
+        diagnosedAt: new Date().toISOString().split('T')[0], 
+        notes: '' 
+      });
+      loadMedicalHistory();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to save medical history');
+    }
+  };
+
+  const handleDeleteMedical = (recordId: string, description: string) => {
+    Alert.alert(
+      'Delete Record',
+      `Are you sure you want to delete this medical record: "${description}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await adminService.deleteMedicalHistory(recordId);
+              Alert.alert('Success', 'Medical history deleted');
+              loadMedicalHistory();
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to delete record');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleEditMedical = (record: any) => {
+    setEditingRecord(record);
+    setMedicalForm({
+      type: record.type,
+      description: record.description,
+      diagnosedAt: record.diagnosedAt ? new Date(record.diagnosedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      notes: record.notes || '',
+    });
+    setShowAddMedical(true);
+  };
+
+  const getMedicalTypeColor = (type: string) => {
+    switch (type) {
+      case 'CONDITION':
+        return { bg: '#fef3c7', text: '#f59e0b' };
+      case 'INJURY':
+        return { bg: '#fee2e2', text: '#dc2626' };
+      case 'MEDICATION':
+        return { bg: '#dbeafe', text: '#3b82f6' };
+      case 'ALLERGY':
+        return { bg: '#ede9fe', text: '#8b5cf6' };
+      default:
+        return { bg: '#f3f4f6', text: '#6b7280' };
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -342,6 +499,78 @@ export function AdminStudentDetails({ studentId, onBack }: AdminStudentDetailsPr
           </View>
         )}
 
+        {/* Medical History */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Medical History</Text>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setShowAddMedical(true)}
+            >
+              <Plus size={20} color="#ffffff" />
+              <Text style={styles.addButtonText}>Add Record</Text>
+            </TouchableOpacity>
+          </View>
+
+          {medicalHistory.length > 0 ? (
+            medicalHistory.map((record: any, index: number) => (
+              <TouchableOpacity 
+                key={record.id} 
+                style={[styles.medicalCard, index > 0 && { marginTop: 12 }]}
+                onPress={() => handleEditMedical(record)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.medicalHeader}>
+                  <View style={[styles.medicalTypeBadge, { 
+                    backgroundColor: getMedicalTypeColor(record.type).bg 
+                  }]}>
+                    <Text style={[styles.medicalTypeText, { 
+                      color: getMedicalTypeColor(record.type).text 
+                    }]}>
+                      {record.type}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleDeleteMedical(record.id, record.description);
+                    }}
+                    style={styles.deleteIconButton}
+                  >
+                    <Trash2 size={18} color="#dc2626" />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.medicalDescription}>{record.description}</Text>
+
+                {record.diagnosedAt && (
+                  <View style={styles.medicalInfo}>
+                    <Calendar size={14} color="#6b7280" />
+                    <Text style={styles.medicalInfoText}>
+                      Diagnosed: {new Date(record.diagnosedAt).toLocaleDateString()}
+                    </Text>
+                  </View>
+                )}
+
+                {record.notes && (
+                  <View style={styles.medicalNotes}>
+                    <FileText size={14} color="#6b7280" />
+                    <Text style={styles.medicalNotesText}>{record.notes}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={styles.emptyMedical}>
+              <FileText size={32} color="#d1d5db" />
+              <Text style={styles.emptyMedicalText}>No medical history recorded</Text>
+              <Text style={styles.emptyMedicalSubtext}>
+                Add past illnesses, conditions, or allergies
+              </Text>
+            </View>
+          )}
+        </View>
+
         {/* Device Information */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Assigned Device</Text>
@@ -541,6 +770,248 @@ export function AdminStudentDetails({ studentId, onBack }: AdminStudentDetailsPr
           )}
         </View>
       </ScrollView>
+
+      {/* Add Medical History Modal */}
+      <Modal
+        visible={showAddMedical}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAddMedical(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {editingRecord ? 'Edit Medical History' : 'Add Medical History'}
+              </Text>
+              <TouchableOpacity onPress={() => {
+                setShowAddMedical(false);
+                setEditingRecord(null);
+                setMedicalForm({ 
+                  type: 'CONDITION', 
+                  description: '', 
+                  diagnosedAt: new Date().toISOString().split('T')[0], 
+                  notes: '' 
+                });
+              }}>
+                <X size={24} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Type *</Text>
+                <View style={styles.typeButtons}>
+                  {medicalTypes.map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={[
+                        styles.typeButton,
+                        medicalForm.type === type && styles.typeButtonActive,
+                        { backgroundColor: getMedicalTypeColor(type).bg },
+                      ]}
+                      onPress={() => setMedicalForm({ ...medicalForm, type })}
+                    >
+                      <Text
+                        style={[
+                          styles.typeButtonText,
+                          { color: getMedicalTypeColor(type).text },
+                        ]}
+                      >
+                        {type}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Description *</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={medicalForm.description}
+                  onChangeText={(text) => setMedicalForm({ ...medicalForm, description: text })}
+                  placeholder="E.g., Asthma, Heart condition, etc."
+                  placeholderTextColor="#9ca3af"
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Diagnosed Date</Text>
+                <TouchableOpacity
+                  style={[styles.input, styles.datePickerButton]}
+                  onPress={() => {
+                    const date = medicalForm.diagnosedAt ? new Date(medicalForm.diagnosedAt) : new Date();
+                    setTempDate({
+                      year: date.getFullYear().toString(),
+                      month: (date.getMonth() + 1).toString().padStart(2, '0'),
+                      day: date.getDate().toString().padStart(2, '0'),
+                    });
+                    setShowDatePicker(true);
+                  }}
+                >
+                  <Calendar size={20} color="#9ca3af" />
+                  <Text style={[styles.datePickerText, medicalForm.diagnosedAt && styles.datePickerTextSelected]}>
+                    {medicalForm.diagnosedAt ? new Date(medicalForm.diagnosedAt).toLocaleDateString() : 'Select date'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Additional Notes (Optional)</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={medicalForm.notes}
+                  onChangeText={(text) => setMedicalForm({ ...medicalForm, notes: text })}
+                  placeholder="Any additional information..."
+                  placeholderTextColor="#9ca3af"
+                  multiline
+                  numberOfLines={4}
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowAddMedical(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={handleAddMedical}
+              >
+                <Text style={styles.saveButtonText}>
+                  {editingRecord ? 'Update Record' : 'Add Record'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Date Picker Modal */}
+      <Modal
+        visible={showDatePicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDatePicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowDatePicker(false)}
+        >
+          <View style={styles.datePickerContent}>
+            <Text style={styles.modalTitle}>Select Diagnosed Date</Text>
+            
+            <View style={styles.datePickerContainer}>
+              {/* Year Picker */}
+              <View style={styles.datePickerColumn}>
+                <Text style={styles.datePickerLabel}>Year</Text>
+                <ScrollView style={styles.dateScrollView}>
+                  {Array.from({ length: 50 }, (_, i) => 1980 + i).reverse().map((year) => (
+                    <TouchableOpacity
+                      key={year}
+                      style={[
+                        styles.dateOption,
+                        tempDate.year === year.toString() && styles.dateOptionSelected
+                      ]}
+                      onPress={() => setTempDate(prev => ({ ...prev, year: year.toString() }))}
+                    >
+                      <Text style={[
+                        styles.dateOptionText,
+                        tempDate.year === year.toString() && styles.dateOptionTextSelected
+                      ]}>
+                        {year}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* Month Picker */}
+              <View style={styles.datePickerColumn}>
+                <Text style={styles.datePickerLabel}>Month</Text>
+                <ScrollView style={styles.dateScrollView}>
+                  {Array.from({ length: 12 }, (_, i) => {
+                    const month = (i + 1).toString().padStart(2, '0');
+                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    return (
+                      <TouchableOpacity
+                        key={month}
+                        style={[
+                          styles.dateOption,
+                          tempDate.month === month && styles.dateOptionSelected
+                        ]}
+                        onPress={() => setTempDate(prev => ({ ...prev, month }))}
+                      >
+                        <Text style={[
+                          styles.dateOptionText,
+                          tempDate.month === month && styles.dateOptionTextSelected
+                        ]}>
+                          {monthNames[i]}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              {/* Day Picker */}
+              <View style={styles.datePickerColumn}>
+                <Text style={styles.datePickerLabel}>Day</Text>
+                <ScrollView style={styles.dateScrollView}>
+                  {Array.from({ length: 31 }, (_, i) => {
+                    const day = (i + 1).toString().padStart(2, '0');
+                    return (
+                      <TouchableOpacity
+                        key={day}
+                        style={[
+                          styles.dateOption,
+                          tempDate.day === day && styles.dateOptionSelected
+                        ]}
+                        onPress={() => setTempDate(prev => ({ ...prev, day }))}
+                      >
+                        <Text style={[
+                          styles.dateOptionText,
+                          tempDate.day === day && styles.dateOptionTextSelected
+                        ]}>
+                          {day}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowDatePicker(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={() => {
+                  setMedicalForm({ 
+                    ...medicalForm, 
+                    diagnosedAt: `${tempDate.year}-${tempDate.month}-${tempDate.day}` 
+                  });
+                  setShowDatePicker(false);
+                }}
+              >
+                <Text style={styles.saveButtonText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -820,5 +1291,257 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 14,
     color: '#9ca3af',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0d9488',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  addButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  medicalCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  medicalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  medicalTypeBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  medicalTypeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  deleteIconButton: {
+    padding: 4,
+  },
+  medicalDescription: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  medicalInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
+  medicalInfoText: {
+    fontSize: 13,
+    color: '#6b7280',
+  },
+  medicalNotes: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 8,
+    padding: 12,
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+  },
+  medicalNotesText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#6b7280',
+    lineHeight: 18,
+  },
+  emptyMedical: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  emptyMedicalText: {
+    marginTop: 12,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  emptyMedicalSubtext: {
+    marginTop: 4,
+    fontSize: 13,
+    color: '#9ca3af',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  modalBody: {
+    padding: 20,
+  },
+  formGroup: {
+    marginBottom: 20,
+  },
+  formLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  typeButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  typeButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  typeButtonActive: {
+    borderColor: '#0d9488',
+  },
+  typeButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    color: '#111827',
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#f3f4f6',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  saveButton: {
+    backgroundColor: '#0d9488',
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  datePickerText: {
+    fontSize: 14,
+    color: '#9ca3af',
+  },
+  datePickerTextSelected: {
+    color: '#111827',
+  },
+  datePickerContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+    alignSelf: 'center',
+    marginVertical: 'auto',
+  },
+  datePickerContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginVertical: 16,
+  },
+  datePickerColumn: {
+    flex: 1,
+  },
+  datePickerLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  dateScrollView: {
+    maxHeight: 200,
+  },
+  dateOption: {
+    padding: 12,
+    borderRadius: 6,
+    marginBottom: 4,
+    backgroundColor: '#f9fafb',
+    alignItems: 'center',
+  },
+  dateOptionSelected: {
+    backgroundColor: '#0d9488',
+  },
+  dateOptionText: {
+    fontSize: 14,
+    color: '#111827',
+  },
+  dateOptionTextSelected: {
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
   },
 });

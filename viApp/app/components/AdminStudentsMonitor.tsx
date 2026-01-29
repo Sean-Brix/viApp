@@ -10,26 +10,11 @@ import {
   Alert,
 } from 'react-native';
 import { ChevronLeft, Heart, Thermometer, Droplet, Activity as ActivityIcon, Battery, Smartphone, UserX } from 'lucide-react-native';
-import { adminService } from '../../src/services/api';
+import { adminService, type StudentListItem } from '../../src/services/api';
+import { websocketService } from '../../src/services/websocket';
 
-interface Device {
-  deviceId: string;
-  deviceName: string;
-  status: string;
-  batteryLevel?: number;
-}
-
-interface Student {
-  id: string;
-  firstName: string;
-  lastName: string;
-  gradeLevel: string;
-  section?: string;
-  user: {
-    username: string;
-    email: string;
-  };
-  device?: Device;
+interface Student extends StudentListItem {
+  // StudentListItem already has latestVital, we just need to ensure vitals array exists for real-time updates
   vitals?: Array<{
     heartRate?: number;
     temperature?: number;
@@ -49,25 +34,105 @@ export function AdminStudentsMonitor({ onBack, onAssignDevice }: AdminStudentsMo
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
   useEffect(() => {
+    console.log('🔄 AdminStudentsMonitor mounted');
+    console.log('🔍 WebSocket state:', websocketService.getConnectionState());
+    console.log('🔍 WebSocket connected:', websocketService.isConnected());
+    
     loadStudents();
     
-    // Auto-refresh every 10 seconds
-    const interval = setInterval(() => {
-      loadStudents();
-    }, 10000);
+    // Subscribe to real-time vital signs updates (no polling needed)
+    const unsubscribeVitals = websocketService.onVitalSignsUpdate((data) => {
+      console.log('📊 ===== WEBSOCKET UPDATE RECEIVED =====');
+      console.log('📊 StudentId from WebSocket:', data.studentId);
+      console.log('📊 Vital data:', data.data);
+      
+      // Update the specific student's vital signs
+      setStudents(prevStudents => {
+        console.log('📊 Total students:', prevStudents.length);
+        const updated = prevStudents.map(student => {
+          // Check if this is the student we need to update
+          const isMatch = student.id === data.studentId || student.studentId === data.studentId;
+          if (isMatch) {
+            console.log('✅ MATCH FOUND! Updating:', student.firstName, student.lastName);
+            const newVital = {
+              heartRate: data.data.heartRate,
+              temperature: data.data.temperature,
+              spO2: data.data.spO2,
+              bloodPressureSystolic: data.data.bloodPressureSystolic,
+              bloodPressureDiastolic: data.data.bloodPressureDiastolic,
+              timestamp: data.data.recordedAt || data.timestamp,
+            };
+            return {
+              ...student,
+              latestVital: newVital,
+              vitals: [newVital, ...(student.vitals || [])],
+            };
+          }
+          return student;
+        });
+        setLastUpdate(new Date());
+        return updated;
+      });
+    });
 
-    return () => clearInterval(interval);
+    console.log('✅ Subscribed to vital signs updates');
+
+    // Subscribe to real-time alerts
+    const unsubscribeAlerts = websocketService.onAlert((data) => {
+      console.log('🚨 Real-time alert in monitor:', data);
+      // Just reload without showing loading indicator
+      loadStudents(true);
+    });
+
+    console.log('✅ Subscribed to alerts');
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      console.log('🧹 AdminStudentsMonitor unmounting');
+      unsubscribeVitals();
+      unsubscribeAlerts();
+    };
   }, []);
 
-  const loadStudents = async () => {
+  const loadStudents = async (silent = false) => {
     try {
-      setLoading(true);
-      const response = await adminService.getStudents({ limit: 100 });
+      // Only show loading spinner on initial load, not on background updates
+      if (!silent && !refreshing) {
+        setLoading(true);
+      }
+      console.log('🔄 Loading students (silent:', silent, ')...');
+      
+      // Force refresh to bypass ALL caching
+      const response = await adminService.getStudents({ 
+        limit: 100, 
+        forceRefresh: true,
+      });
+      
+      console.log('📋 API Response - Students loaded:', response.students.length);
+      if (response.students.length > 0 && !silent) {
+        const firstStudent = response.students[0];
+        console.log('📋 Sample student:', {
+          name: `${firstStudent.firstName} ${firstStudent.lastName}`,
+          id: firstStudent.id,
+          studentId: firstStudent.studentId,
+          hasDevice: !!firstStudent.device,
+          deviceId: firstStudent.device?.deviceId,
+          hasLatestVital: !!firstStudent.latestVital,
+          latestVitalData: firstStudent.latestVital,
+        });
+      }
+      
       setStudents(response.students);
+      setLastUpdate(new Date());
+      console.log('✅ Students state updated at:', new Date().toLocaleTimeString());
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to load students');
+      console.error('❌ Failed to load students:', error);
+      if (!silent) {
+        Alert.alert('Error', error.message || 'Failed to load students');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -75,13 +140,31 @@ export function AdminStudentsMonitor({ onBack, onAssignDevice }: AdminStudentsMo
   };
 
   const onRefresh = () => {
+    console.log('🔄 Manual refresh triggered');
     setRefreshing(true);
     loadStudents();
   };
 
   const getLatestVital = (student: Student) => {
-    if (!student.vitals || student.vitals.length === 0) return null;
-    return student.vitals[0];
+    console.log(`🔍 Getting latest vital for ${student.firstName}:`, {
+      hasLatestVital: !!student.latestVital,
+      hasVitalsArray: !!student.vitals,
+      vitalsLength: student.vitals?.length || 0,
+      latestVital: student.latestVital,
+      firstVitalInArray: student.vitals?.[0]
+    });
+    
+    // First check latestVital (from API)
+    if (student.latestVital) {
+      return student.latestVital;
+    }
+    
+    // Then check vitals array (for real-time updates)
+    if (student.vitals && student.vitals.length > 0) {
+      return student.vitals[0];
+    }
+    
+    return null;
   };
 
   const formatTimestamp = (timestamp: string) => {
@@ -153,7 +236,10 @@ export function AdminStudentsMonitor({ onBack, onAssignDevice }: AdminStudentsMo
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <ChevronLeft size={24} color="#111827" />
         </TouchableOpacity>
-        <Text style={styles.title}>Students Monitor</Text>
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>Students Monitor</Text>
+          <Text style={styles.subtitle}>Updates: {lastUpdate.toLocaleTimeString()}</Text>
+        </View>
         <View style={styles.placeholder} />
       </View>
 
@@ -323,10 +409,18 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
   },
+  titleContainer: {
+    alignItems: 'center',
+  },
   title: {
     fontSize: 20,
     fontWeight: '600',
     color: '#111827',
+  },
+  subtitle: {
+    fontSize: 10,
+    color: '#9ca3af',
+    marginTop: 2,
   },
   placeholder: {
     width: 40,

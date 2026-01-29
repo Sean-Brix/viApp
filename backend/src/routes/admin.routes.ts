@@ -49,6 +49,35 @@ router.put('/student/:id', adminController.updateStudent);
  */
 router.delete('/student/:id', adminController.deactivateStudent);
 
+// Medical History Management
+/**
+ * @route   GET /api/admin/student/:id/medical-history
+ * @desc    Get student's medical history
+ * @access  Private (Admin)
+ */
+router.get('/student/:id/medical-history', adminController.getMedicalHistory);
+
+/**
+ * @route   POST /api/admin/student/:id/medical-history
+ * @desc    Add medical history record
+ * @access  Private (Admin)
+ */
+router.post('/student/:id/medical-history', adminController.addMedicalHistory);
+
+/**
+ * @route   PUT /api/admin/medical-history/:historyId
+ * @desc    Update medical history record
+ * @access  Private (Admin)
+ */
+router.put('/medical-history/:historyId', adminController.updateMedicalHistory);
+
+/**
+ * @route   DELETE /api/admin/medical-history/:historyId
+ * @desc    Delete medical history record
+ * @access  Private (Admin)
+ */
+router.delete('/medical-history/:historyId', adminController.deleteMedicalHistory);
+
 // Alert Management
 /**
  * @route   GET /api/admin/alerts

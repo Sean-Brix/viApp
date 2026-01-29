@@ -1,10 +1,10 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ENV_CONFIG, getApiUrl } from '../../config/environment';
 
 // API Configuration
-const API_BASE_URL = __DEV__ 
-  ? 'http://192.168.100.10:3001/api' // Development - Use your local IP for physical devices
-  : 'https://viapp-qq6u.onrender.com/api'; // Production
+// Use the centralized environment config
+const API_BASE_URL = getApiUrl();
 
 // Storage Keys
 export const STORAGE_KEYS = {
@@ -18,7 +18,7 @@ export const STORAGE_KEYS = {
 // Create axios instance
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  timeout: ENV_CONFIG.REQUEST_TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
   },

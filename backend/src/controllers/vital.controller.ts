@@ -1,8 +1,10 @@
 import { Response, NextFunction, Request } from 'express';
 import { validationResult } from 'express-validator';
+import { Server } from 'socket.io';
 import { VitalService } from '../services/vital.service';
 import { sendSuccess, sendError } from '../utils/response';
 import { AuthRequest } from '../middleware/auth';
+import { emitVitalSignsUpdate, emitAlert } from '../websocket/socket';
 
 const vitalService = new VitalService();
 
@@ -11,6 +13,10 @@ const vitalService = new VitalService();
  * ESP32 sends: { deviceId, heartRate, temperature, spO2, bloodPressureSystolic, bloodPressureDiastolic, batteryLevel }
  */
 export const esp32UploadVital = async (req: Request, res: Response, next: NextFunction) => {
+  console.log('🚨 ===== ESP32 UPLOAD ENDPOINT HIT =====');
+  console.log('🚨 Request body:', req.body);
+  console.log('🚨 ====================================');
+  
   try {
     const { deviceId, heartRate, temperature, spO2, bloodPressureSystolic, bloodPressureDiastolic, batteryLevel } = req.body;
 
@@ -33,6 +39,33 @@ export const esp32UploadVital = async (req: Request, res: Response, next: NextFu
       batteryLevel
     });
 
+    // Emit real-time update via WebSocket
+    const io = req.app.get('io') as Server;
+    if (io && result.vital) {
+      // Get student info from result
+      const studentId = result.vital.studentId;
+      
+      console.log('📡 Emitting vital signs update for student:', studentId);
+      console.log('📡 Vital data:', {
+        id: result.vital.id,
+        heartRate: result.vital.heartRate,
+        temperature: result.vital.temperature,
+        spO2: result.vital.spO2,
+      });
+      
+      emitVitalSignsUpdate(io, studentId, {
+        id: result.vital.id,
+        heartRate: result.vital.heartRate,
+        temperature: result.vital.temperature,
+        spO2: result.vital.spO2,
+        bloodPressureSystolic: result.vital.bloodPressureSystolic,
+        bloodPressureDiastolic: result.vital.bloodPressureDiastolic,
+        recordedAt: result.vital.timestamp,
+      });
+    } else {
+      console.log('⚠️ WebSocket not available or no vital data');
+    }
+
     sendSuccess(res, result, 'Vital data uploaded successfully', 201);
   } catch (error: any) {
     next(error);
@@ -51,6 +84,21 @@ export const uploadVital = async (req: AuthRequest, res: Response, next: NextFun
     }
 
     const result = await vitalService.uploadVital(req.user.userId, req.body);
+
+    // Emit real-time update via WebSocket
+    const io = req.app.get('io') as Server;
+    if (io && result.vital) {
+      emitVitalSignsUpdate(io, result.vital.studentId, {
+        id: result.vital.id,
+        heartRate: result.vital.heartRate,
+        temperature: result.vital.temperature,
+        spO2: result.vital.spO2,
+        bloodPressureSystolic: result.vital.bloodPressureSystolic,
+        bloodPressureDiastolic: result.vital.bloodPressureDiastolic,
+        recordedAt: result.vital.timestamp,
+      });
+    }
+
     sendSuccess(res, result, 'Vital data uploaded successfully', 201);
   } catch (error: any) {
     next(error);

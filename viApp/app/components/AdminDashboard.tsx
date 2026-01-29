@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, RefreshControl, ActivityIndicator } from 'react-native';
 import { Users, Activity, AlertTriangle, Plus, Search, Filter } from 'lucide-react-native';
 import { adminService } from '../../src/services/api';
+import { websocketService } from '../../src/services/websocket';
 
 interface AdminDashboardProps {
   onNavigate: (screen: string) => void;
@@ -22,6 +23,48 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
   useEffect(() => {
     loadDashboardData();
+
+    // Subscribe to real-time vital signs updates
+    const unsubscribeVitals = websocketService.onVitalSignsUpdate((data) => {
+      console.log('📊 Real-time vital signs update on dashboard:', data.studentId);
+      
+      // Update the specific student in the list
+      setStudents(prevStudents => {
+        return prevStudents.map(student => {
+          if (student.id === data.studentId || student.user?.id === data.studentId) {
+            // Add the new vital sign to the student's data
+            return {
+              ...student,
+              vitalSigns: data.data ? [data.data, ...(student.vitalSigns || [])] : student.vitalSigns,
+              lastUpdated: data.timestamp,
+            };
+          }
+          return student;
+        });
+      });
+    });
+
+    // Subscribe to real-time alerts
+    const unsubscribeAlerts = websocketService.onAlert((data) => {
+      console.log('🚨 Real-time alert on dashboard:', data.studentId);
+      
+      // Add new alert to the list
+      setAlerts(prevAlerts => [data.alert, ...prevAlerts]);
+      
+      // Update critical alerts count
+      if (data.alert.severity === 'HIGH' || data.alert.severity === 'CRITICAL') {
+        setStats(prevStats => ({
+          ...prevStats,
+          criticalAlerts: prevStats.criticalAlerts + 1,
+        }));
+      }
+    });
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      unsubscribeVitals();
+      unsubscribeAlerts();
+    };
   }, []);
 
   const loadDashboardData = async () => {
@@ -150,7 +193,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             onPress={() => onNavigate('monitorStudents')}
           >
             <Activity size={20} color="#ffffff" />
-            <Text style={styles.actionButtonText}>Monitor Students</Text>
+            <Text style={styles.actionButtonText}>Monitoring</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 

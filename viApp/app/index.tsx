@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, SafeAreaView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { LoginScreen } from './components/LoginScreen';
@@ -19,12 +19,42 @@ import { AdminStudentDetails } from './components/AdminStudentDetails';
 import { SchoolHealthStats } from './components/SchoolHealthStats';
 import { BottomNav } from './components/BottomNav';
 import { Screen, UserType } from './types';
+import { websocketService } from '../src/services/websocket';
 
 export default function Index() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userType, setUserType] = useState<UserType>('admin');
   const [activeScreen, setActiveScreen] = useState<Screen>('home');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+
+  // Connect to WebSocket when user logs in
+  useEffect(() => {
+    if (isLoggedIn) {
+      console.log('🔌 User logged in, connecting to WebSocket in 2000ms...');
+      // Delay connection to ensure token is saved to AsyncStorage
+      const timer = setTimeout(async () => {
+        console.log('🔌 Starting WebSocket connection...');
+        await websocketService.connect();
+        console.log('🔌 WebSocket connection initiated');
+        console.log('🔍 Connection state:', websocketService.getConnectionState());
+      }, 2000); // Increased to 2 seconds
+      
+      return () => clearTimeout(timer);
+    } else {
+      console.log('🔌 User logged out, disconnecting from WebSocket...');
+      websocketService.disconnect();
+      websocketService.clearCallbacks();
+    }
+  }, [isLoggedIn]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      console.log('🧹 App unmounting, cleaning up WebSocket...');
+      websocketService.disconnect();
+      websocketService.clearCallbacks();
+    };
+  }, []);
 
   const handleLogin = (type: UserType) => {
     setUserType(type);

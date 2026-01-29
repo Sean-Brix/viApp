@@ -4,6 +4,7 @@ import { adminService } from '../../src/services/api';
 import type { Alert as BackendAlert } from '../../src/services/api/student.service';
 import { AlertsScreen } from './AlertsScreen';
 import { Alert } from '../types';
+import { websocketService } from '../../src/services/websocket';
 
 interface AlertsContainerProps {
   onBack?: () => void;
@@ -38,10 +39,21 @@ export function AlertsContainer({ onBack }: AlertsContainerProps) {
   useEffect(() => {
     fetchAlerts();
     
-    // Refresh alerts every 30 seconds
-    const interval = setInterval(fetchAlerts, 30000);
+    // Subscribe to real-time alerts
+    const unsubscribeAlerts = websocketService.onAlert((data) => {
+      console.log('🚨 Real-time alert in alerts container:', data);
+      // Add new alert to the list
+      if (data.alert) {
+        setAlerts(prevAlerts => [data.alert, ...prevAlerts]);
+      } else {
+        // Reload all alerts if we don't have the full alert object
+        fetchAlerts();
+      }
+    });
     
-    return () => clearInterval(interval);
+    return () => {
+      unsubscribeAlerts();
+    };
   }, [fetchAlerts]);
 
   // Transform backend alerts to match AlertsScreen expected format

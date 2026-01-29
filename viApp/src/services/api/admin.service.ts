@@ -125,14 +125,37 @@ class AdminService {
     guardianContact?: string;
   }): Promise<StudentProfile> {
     try {
-      const response = await apiClient.post('/admin/student', data);
+      console.log('Creating student with data:', { ...data, password: '***' });
+      const response = await apiClient.post('/admin/student/create', data);
+      console.log('Student created successfully:', response.data);
       
       // Invalidate student list cache
       await cacheService.invalidateStudentCaches();
       
       return response.data.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.error?.message || error.response?.data?.message || 'Failed to create student');
+      console.error('Admin service createStudent error:', error);
+      console.error('Error code:', error.code);
+      console.error('Error config:', error.config?.url);
+      
+      // Network error (no response from server)
+      if (!error.response) {
+        if (error.code === 'ECONNABORTED') {
+          throw new Error('Request timeout: Server is taking too long to respond. Please try again.');
+        }
+        if (error.code === 'ERR_NETWORK' || error.message.includes('Network Error')) {
+          throw new Error('Network error: Cannot connect to server. Please check:\n1. Your internet connection\n2. Backend server is running\n3. API URL is correct');
+        }
+        throw new Error('Network error: Unable to connect to server. Please check your internet connection.');
+      }
+      
+      // Server responded with error
+      const errorMessage = error.response?.data?.error?.message 
+        || error.response?.data?.message 
+        || error.response?.data?.error
+        || `Server error (${error.response?.status}): Failed to create student`;
+      
+      throw new Error(errorMessage);
     }
   }
 
@@ -157,14 +180,29 @@ class AdminService {
    */
   async deactivateStudent(studentId: string): Promise<{ message: string }> {
     try {
+      console.log('API: Deactivating student:', studentId);
       const response = await apiClient.delete(`/admin/student/${studentId}`);
+      console.log('API: Deactivate response:', response.data);
       
       // Invalidate caches
       await cacheService.invalidateStudentCaches(studentId);
       
       return response.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to deactivate student');
+      console.error('API: Deactivate student error:', error);
+      console.error('API: Error response:', error.response?.data);
+      
+      // Network error
+      if (!error.response) {
+        throw new Error('Network error: Unable to connect to server');
+      }
+      
+      const errorMessage = error.response?.data?.error?.message 
+        || error.response?.data?.message 
+        || error.response?.data?.error
+        || 'Failed to delete student';
+      
+      throw new Error(errorMessage);
     }
   }
 
@@ -297,6 +335,77 @@ class AdminService {
       throw new Error(error.response?.data?.message || 'Failed to fetch devices');
     }
   }
+
+  /**
+   * Get medical history for a student
+   */
+  async getMedicalHistory(studentId: string): Promise<MedicalHistoryRecord[]> {
+    try {
+      const response = await apiClient.get(`/admin/student/${studentId}/medical-history`);
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch medical history');
+    }
+  }
+
+  /**
+   * Add medical history record
+   */
+  async addMedicalHistory(studentId: string, data: {
+    type: string;
+    description: string;
+    diagnosedAt?: string;
+    notes?: string;
+  }): Promise<MedicalHistoryRecord> {
+    try {
+      const response = await apiClient.post(`/admin/student/${studentId}/medical-history`, data);
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to add medical history');
+    }
+  }
+
+  /**
+   * Update medical history record
+   */
+  async updateMedicalHistory(historyId: string, data: {
+    type?: string;
+    description?: string;
+    diagnosedAt?: string;
+    notes?: string;
+    isActive?: boolean;
+  }): Promise<MedicalHistoryRecord> {
+    try {
+      const response = await apiClient.put(`/admin/medical-history/${historyId}`, data);
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to update medical history');
+    }
+  }
+
+  /**
+   * Delete medical history record
+   */
+  async deleteMedicalHistory(historyId: string): Promise<void> {
+    try {
+      await apiClient.delete(`/admin/medical-history/${historyId}`);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to delete medical history');
+    }
+  }
+}
+
+// Type definitions
+interface MedicalHistoryRecord {
+  id: string;
+  studentId: string;
+  type: string;
+  description: string;
+  diagnosedAt: string | null;
+  notes: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default new AdminService();

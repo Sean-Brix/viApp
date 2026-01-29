@@ -45,21 +45,26 @@ export function AdminStudentsList({ onBack, onStudentSelect, onEditStudent }: Ad
 
   const handleDeleteStudent = async (studentId: string, studentName: string) => {
     Alert.alert(
-      'Deactivate Student',
-      `Are you sure you want to deactivate ${studentName}? This will disable their account.`,
+      'Delete Student Account',
+      `Are you sure you want to delete ${studentName}'s account? This action will deactivate the account.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Deactivate',
+          text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             try {
-              await adminService.deactivateStudent(studentId);
-              Alert.alert('Success', 'Student deactivated successfully');
-              loadStudents();
+              console.log('Deleting student:', studentId);
+              const result = await adminService.deactivateStudent(studentId);
+              console.log('Delete result:', result);
+              Alert.alert('Success', 'Student account deleted successfully');
+              // Reload the student list to refresh the view
+              await loadStudents();
             } catch (error: any) {
-              console.error('Failed to deactivate student:', error);
-              Alert.alert('Error', error.message || 'Failed to deactivate student');
+              console.error('Failed to delete student:', error);
+              console.error('Error details:', error.response?.data);
+              const errorMessage = error.message || 'Failed to delete student';
+              Alert.alert('Error', errorMessage);
             }
           },
         },
@@ -87,9 +92,9 @@ export function AdminStudentsList({ onBack, onStudentSelect, onEditStudent }: Ad
 
   const filteredStudents = students.filter((student) => {
     const matchesSearch = 
-      student.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.studentId.toLowerCase().includes(searchQuery.toLowerCase());
+      (student.firstName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (student.lastName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (student.studentId || '').toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesFilter = 
       filterStatus === 'all' || 

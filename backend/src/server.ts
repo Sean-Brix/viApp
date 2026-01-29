@@ -1,4 +1,6 @@
 import express, { Application } from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
@@ -8,12 +10,30 @@ import studentRoutes from './routes/student.routes';
 import adminRoutes from './routes/admin.routes';
 import vitalRoutes from './routes/vital.routes';
 import { errorHandler, notFound } from './middleware/error';
+import { setupWebSocket } from './websocket/socket';
 
 // Load environment variables
 dotenv.config();
 
 const app: Application = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST'],
+  },
+});
+
 const PORT = parseInt(process.env.PORT || '3001', 10);
+
+// Setup WebSocket
+setupWebSocket(io);
+
+// Make io instance available throughout the app
+app.set('io', io);
+
+// Make io accessible in routes
+app.set('io', io);
 
 // Security middleware
 app.use(helmet({
@@ -116,13 +136,14 @@ app.use(notFound);
 app.use(errorHandler);
 
 // Start server - explicitly bind to 0.0.0.0 to listen on all interfaces
-const server = app.listen(PORT, '0.0.0.0', () => {
+const server = httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🚀 ViApp Backend Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🏥 Health Check: http://localhost:${PORT}/health`);
   console.log(`📚 API Docs: http://localhost:${PORT}/api`);
   console.log(`🧪 API Tester: http://localhost:${PORT}/ or http://localhost:${PORT}/api-tester`);
-  console.log(`🌐 Network: http://192.168.100.10:${PORT}/api\n`);
+  console.log(`🌐 Network: http://192.168.100.10:${PORT}/api`);
+  console.log(`⚡ WebSocket: ws://192.168.100.10:${PORT}\n`);
 });
 
 // Handle uncaught errors

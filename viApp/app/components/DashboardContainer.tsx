@@ -4,6 +4,7 @@ import { adminService } from '../../src/services/api';
 import type { StudentListItem } from '../../src/services/api/admin.service';
 import { Dashboard } from './Dashboard';
 import { Student } from '../types';
+import { websocketService } from '../../src/services/websocket';
 
 interface DashboardContainerProps {
   onStudentClick: (student: Student) => void;
@@ -42,12 +43,35 @@ export function DashboardContainer({ onStudentClick, onAddStudent }: DashboardCo
   useEffect(() => {
     fetchStudents();
     
-    // Auto-refresh every 10 seconds for real-time updates
-    const interval = setInterval(() => {
-      fetchStudents(true);
-    }, 10000);
+    // Subscribe to real-time vital signs updates
+    const unsubscribeVitals = websocketService.onVitalSignsUpdate((data) => {
+      console.log('📊 Real-time vital signs update in dashboard container:', data);
+      
+      // Update the specific student's vital signs
+      setStudents(prevStudents => {
+        return prevStudents.map(student => {
+          if (student.studentId === data.studentId) {
+            return {
+              ...student,
+              latestVital: data.data || student.latestVital,
+            };
+          }
+          return student;
+        });
+      });
+    });
 
-    return () => clearInterval(interval);
+    // Subscribe to real-time alerts
+    const unsubscribeAlerts = websocketService.onAlert((data) => {
+      console.log('🚨 Real-time alert in dashboard container:', data);
+      // Reload to get updated student status
+      fetchStudents(true);
+    });
+
+    return () => {
+      unsubscribeVitals();
+      unsubscribeAlerts();
+    };
   }, [fetchStudents]);
 
   const handleRefresh = useCallback(() => {

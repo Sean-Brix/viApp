@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { Activity, Heart, Thermometer, Wind, AlertTriangle } from 'lucide-react-native';
 import { studentService } from '../../src/services/api';
+import { websocketService } from '../../src/services/websocket';
 
 interface StudentDashboardProps {
   onNavigate: (screen: string) => void;
@@ -16,6 +17,28 @@ export function StudentDashboard({ onNavigate }: StudentDashboardProps) {
 
   useEffect(() => {
     loadDashboardData();
+
+    // Subscribe to real-time vital signs updates
+    const unsubscribeVitals = websocketService.onVitalSignsUpdate((data) => {
+      console.log('📊 Real-time vital signs update for student dashboard');
+      
+      // Update latest vitals with new data
+      setLatestVitals(data.data);
+    });
+
+    // Subscribe to real-time alerts
+    const unsubscribeAlerts = websocketService.onAlert((data) => {
+      console.log('🚨 Real-time alert for student dashboard');
+      
+      // Add new alert to the list
+      setAlerts(prevAlerts => [data.alert, ...prevAlerts.slice(0, 4)]); // Keep only 5 alerts
+    });
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      unsubscribeVitals();
+      unsubscribeAlerts();
+    };
   }, []);
 
   const loadDashboardData = async () => {

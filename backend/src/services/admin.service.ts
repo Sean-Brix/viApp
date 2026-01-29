@@ -11,7 +11,7 @@ export interface CreateStudentData {
   password: string;
   firstName: string;
   lastName: string;
-  birthdate: Date;
+  birthdate: string; // Accept as string, will convert to Date
   gender: 'MALE' | 'FEMALE';
   gradeLevel: string;
   section?: string;
@@ -28,7 +28,12 @@ export class AdminService {
 
     const [students, total] = await Promise.all([
       prisma.student.findMany({
-        where: status ? { status: status as any } : undefined,
+        where: {
+          ...(status ? { status: status as any } : {}),
+          user: {
+            isActive: true, // Only show active students
+          },
+        },
         include: {
           user: {
             select: {
@@ -48,14 +53,21 @@ export class AdminService {
         orderBy: { updatedAt: 'desc' },
       }),
       prisma.student.count({
-        where: status ? { status: status as any } : undefined,
+        where: {
+          ...(status ? { status: status as any } : {}),
+          user: {
+            isActive: true, // Only count active students
+          },
+        },
       }),
     ]);
 
     const studentsWithCalculations = students.map((student) => {
       const age = calculateAge(student.birthdate);
       const bmi = student.weight && student.height ? calculateBMI(student.weight, student.height) : null;
-      return { ...student, age, bmi };
+      // Map vitals array to latestVital for easier frontend consumption
+      const latestVital = student.vitals && student.vitals.length > 0 ? student.vitals[0] : undefined;
+      return { ...student, age, bmi, latestVital };
     });
 
     return {
@@ -121,6 +133,12 @@ export class AdminService {
 
     const passwordHash = await hashPassword(data.password);
 
+    // Convert birthdate string to Date object and validate
+    const birthdateObj = new Date(data.birthdate);
+    if (isNaN(birthdateObj.getTime())) {
+      throw new AppError('Invalid birthdate format. Expected YYYY-MM-DD', 400);
+    }
+
     const user = await prisma.user.create({
       data: {
         username: data.username,
@@ -132,7 +150,7 @@ export class AdminService {
           create: {
             firstName: data.firstName,
             lastName: data.lastName,
-            birthdate: data.birthdate,
+            birthdate: birthdateObj,
             gender: data.gender,
             gradeLevel: data.gradeLevel,
             section: data.section,
@@ -219,21 +237,26 @@ export class AdminService {
   }
 
   async deactivateStudent(studentId: string) {
+    console.log('Deactivating student:', studentId);
+    
     const student = await prisma.student.findUnique({
       where: { id: studentId },
       include: { user: true },
     });
 
     if (!student) {
+      console.error('Student not found:', studentId);
       throw new AppError('Student not found', 404);
     }
 
+    console.log('Deactivating user:', student.userId);
     await prisma.user.update({
       where: { id: student.userId },
       data: { isActive: false },
     });
 
-    return { message: 'Student account deactivated' };
+    console.log('Student deactivated successfully');
+    return { message: 'Student account deactivated successfully' };
   }
 
   async getAllAlerts(page: number = 1, limit: number = 50, severity?: string, status?: string) {
@@ -434,5 +457,100 @@ export class AdminService {
       page: 1,
       totalPages: 1,
     };
+  }
+
+  // Medical History Management
+  async getMedicalHistory(studentId: string) {
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+    });
+
+    if (!student) {
+      throw new AppError('Student not found', 404);
+    }
+
+    const history = await prisma.medicalHistory.findMany({
+      where: { 
+        studentId,
+        isActive: true 
+      },
+      orderBy: { diagnosedAt: 'desc' },
+    });
+
+    return history;
+  }
+
+  async addMedicalHistory(studentId: string, data: {
+    type: string;
+    description: string;
+    diagnosedAt?: string;
+    notes?: string;
+  }) {
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+    });
+
+    if (!student) {
+      throw new AppError('Student not found', 404);
+    }
+
+    const record = await prisma.medicalHistory.create({
+      data: {
+        studentId,
+        type: data.type,
+        description: data.description,
+        diagnosedAt: data.diagnosedAt ? new Date(data.diagnosedAt) : null,
+        notes: data.notes,
+      },
+    });
+
+    return record;
+  }
+
+  async updateMedicalHistory(historyId: string, data: {
+    type?: string;
+    description?: string;
+    diagnosedAt?: string;
+    notes?: string;
+    isActive?: boolean;
+  }) {
+    const history = await prisma.medicalHistory.findUnique({
+      where: { id: historyId },
+    });
+
+    if (!history) {
+      throw new AppError('Medical history record not found', 404);
+    }
+
+    const updated = await prisma.medicalHistory.update({
+      where: { id: historyId },
+      data: {
+        ...(data.type && { type: data.type }),
+        ...(data.description && { description: data.description }),
+        ...(data.diagnosedAt && { diagnosedAt: new Date(data.diagnosedAt) }),
+        ...(data.notes !== undefined && { notes: data.notes }),
+        ...(data.isActive !== undefined && { isActive: data.isActive }),
+      },
+    });
+
+    return updated;
+  }
+
+  async deleteMedicalHistory(historyId: string) {
+    const history = await prisma.medicalHistory.findUnique({
+      where: { id: historyId },
+    });
+
+    if (!history) {
+      throw new AppError('Medical history record not found', 404);
+    }
+
+    // Soft delete by setting isActive to false
+    await prisma.medicalHistory.update({
+      where: { id: historyId },
+      data: { isActive: false },
+    });
+
+    return { message: 'Medical history deleted successfully' };
   }
 }

@@ -152,3 +152,44 @@ export const getAllDevices = async (req: AuthRequest, res: Response, next: NextF
     next(error);
   }
 };
+
+// Medical History Controllers
+export const getMedicalHistory = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const history = await adminService.getMedicalHistory(id as string);
+    sendSuccess(res, history);
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+export const addMedicalHistory = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const record = await adminService.addMedicalHistory(id as string, req.body);
+    sendSuccess(res, record, 'Medical history added successfully', 201);
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+export const updateMedicalHistory = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { historyId } = req.params;
+    const record = await adminService.updateMedicalHistory(historyId as string, req.body);
+    sendSuccess(res, record, 'Medical history updated successfully');
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+export const deleteMedicalHistory = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { historyId } = req.params;
+    await adminService.deleteMedicalHistory(historyId as string);
+    sendSuccess(res, null, 'Medical history deleted successfully');
+  } catch (error: any) {
+    next(error);
+  }
+};

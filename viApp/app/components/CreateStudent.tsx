@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,10 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Modal,
+  Platform,
 } from 'react-native';
-import { ChevronLeft, UserPlus, Calendar } from 'lucide-react-native';
+import { ChevronLeft, UserPlus, Calendar, ChevronDown, Eye, EyeOff } from 'lucide-react-native';
 import { adminService } from '../../src/services/api';
 
 interface CreateStudentProps {
@@ -27,7 +29,7 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
     lastName: '',
     birthdate: '',
     gender: 'MALE' as 'MALE' | 'FEMALE',
-    gradeLevel: 'Grade 10',
+    gradeLevel: '',
     section: '',
     contactNumber: '',
     guardianName: '',
@@ -37,6 +39,24 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showGradePicker, setShowGradePicker] = useState(false);
+  const [showSectionPicker, setShowSectionPicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [tempDate, setTempDate] = useState({ year: '2008', month: '01', day: '01' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  const scrollViewRef = useRef<ScrollView>(null);
+  const fieldRefs = useRef<{ [key: string]: View | null }>({});
+
+  // Grade levels for high school and senior high school
+  const gradeLevels = [
+    'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10',
+    'Grade 11', 'Grade 12'
+  ];
+
+  // Sections
+  const sections = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -56,8 +76,8 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
 
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
     }
 
     if (formData.password !== formData.confirmPassword) {
@@ -66,10 +86,14 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
 
     if (!formData.firstName.trim()) {
       newErrors.firstName = 'First name is required';
+    } else if (!/^[a-zA-Z\s]+$/.test(formData.firstName)) {
+      newErrors.firstName = 'First name should only contain letters';
     }
 
     if (!formData.lastName.trim()) {
       newErrors.lastName = 'Last name is required';
+    } else if (!/^[a-zA-Z\s]+$/.test(formData.lastName)) {
+      newErrors.lastName = 'Last name should only contain letters';
     }
 
     if (!formData.birthdate) {
@@ -82,23 +106,50 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
       }
     }
 
+    if (!formData.gender) {
+      newErrors.gender = 'Gender is required';
+    }
+
     if (!formData.gradeLevel.trim()) {
       newErrors.gradeLevel = 'Grade level is required';
     }
 
     if (!formData.contactNumber.trim()) {
       newErrors.contactNumber = 'Contact number is required';
+    } else if (!/^(\+63|0)?[9]\d{9}$/.test(formData.contactNumber.replace(/[\s-]/g, ''))) {
+      newErrors.contactNumber = 'Invalid Philippine phone number (e.g., +639123456789 or 09123456789)';
     }
 
     if (!formData.guardianName.trim()) {
       newErrors.guardianName = 'Guardian name is required';
+    } else if (!/^[a-zA-Z\s]+$/.test(formData.guardianName)) {
+      newErrors.guardianName = 'Guardian name should only contain letters';
     }
 
     if (!formData.guardianContact.trim()) {
       newErrors.guardianContact = 'Guardian contact is required';
+    } else if (!/^(\+63|0)?[9]\d{9}$/.test(formData.guardianContact.replace(/[\s-]/g, ''))) {
+      newErrors.guardianContact = 'Invalid Philippine phone number (e.g., +639123456789 or 09123456789)';
     }
 
     setErrors(newErrors);
+    
+    // Auto-scroll to first error
+    if (Object.keys(newErrors).length > 0) {
+      const firstErrorField = Object.keys(newErrors)[0];
+      setTimeout(() => {
+        if (fieldRefs.current[firstErrorField]) {
+          fieldRefs.current[firstErrorField]?.measureLayout(
+            scrollViewRef.current as any,
+            (x, y) => {
+              scrollViewRef.current?.scrollTo({ y: y - 100, animated: true });
+            },
+            () => {}
+          );
+        }
+      }, 100);
+    }
+    
     return Object.keys(newErrors).length === 0;
   };
 
@@ -110,6 +161,10 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
     setLoading(true);
 
     try {
+      // Clean phone numbers - remove spaces and keep only digits and +
+      const cleanContactNumber = formData.contactNumber.replace(/[\s-]/g, '');
+      const cleanGuardianContact = formData.guardianContact.replace(/[\s-]/g, '');
+
       await adminService.createStudent({
         username: formData.username.trim().toLowerCase(),
         email: formData.email.trim().toLowerCase(),
@@ -120,9 +175,9 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
         gender: formData.gender,
         gradeLevel: formData.gradeLevel.trim(),
         section: formData.section.trim() || undefined,
-        contactNumber: formData.contactNumber.trim(),
+        contactNumber: cleanContactNumber,
         guardianName: formData.guardianName.trim(),
-        guardianContact: formData.guardianContact.trim(),
+        guardianContact: cleanGuardianContact,
         weight: formData.weight ? parseFloat(formData.weight) : undefined,
         height: formData.height ? parseFloat(formData.height) : undefined,
       });
@@ -138,14 +193,65 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
         ]
       );
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create student');
+      console.error('Create student error:', error);
+      console.error('Error message:', error.message);
+      console.error('Error response:', error.response?.data);
+      
+      // Extract the most helpful error message
+      let errorMessage = 'Failed to create student';
+      
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   const updateField = (field: keyof typeof formData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    // Format phone numbers as user types
+    if (field === 'contactNumber' || field === 'guardianContact') {
+      // Remove all non-digit characters except +
+      let cleaned = value.replace(/[^\d+]/g, '');
+      
+      // If it starts with 0, keep it
+      // If it starts with +63, keep it
+      // Otherwise, just store digits
+      if (cleaned.startsWith('0') && cleaned.length > 1) {
+        // Format: 0912 345 6789
+        if (cleaned.length > 4 && cleaned.length <= 7) {
+          cleaned = cleaned.slice(0, 4) + ' ' + cleaned.slice(4);
+        } else if (cleaned.length > 7) {
+          cleaned = cleaned.slice(0, 4) + ' ' + cleaned.slice(4, 7) + ' ' + cleaned.slice(7, 11);
+        }
+      } else if (cleaned.startsWith('+63')) {
+        // Format: +63 912 345 6789
+        cleaned = cleaned.slice(0, 3);
+        if (value.length > 3) {
+          const digits = value.slice(3).replace(/\D/g, '');
+          if (digits.length > 0) {
+            cleaned += ' ' + digits.slice(0, 3);
+          }
+          if (digits.length > 3) {
+            cleaned += ' ' + digits.slice(3, 6);
+          }
+          if (digits.length > 6) {
+            cleaned += ' ' + digits.slice(6, 10);
+          }
+        }
+      }
+      
+      setFormData(prev => ({ ...prev, [field]: cleaned }));
+    } else if (field === 'firstName' || field === 'lastName' || field === 'guardianName') {
+      // Only allow letters and spaces for names
+      const cleaned = value.replace(/[^a-zA-Z\s]/g, '');
+      setFormData(prev => ({ ...prev, [field]: cleaned }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
+    
     // Clear error for this field
     if (errors[field]) {
       setErrors(prev => {
@@ -167,12 +273,12 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollViewRef} style={styles.scrollView} contentContainerStyle={styles.content}>
         {/* Account Information */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account Information</Text>
           <View style={styles.form}>
-            <View style={styles.formGroup}>
+            <View style={styles.formGroup} ref={(ref) => fieldRefs.current['username'] = ref}>
               <Text style={styles.label}>
                 Username <Text style={styles.required}>*</Text>
               </Text>
@@ -187,7 +293,7 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
               {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
             </View>
 
-            <View style={styles.formGroup}>
+            <View style={styles.formGroup} ref={(ref) => fieldRefs.current['email'] = ref}>
               <Text style={styles.label}>
                 Email <Text style={styles.required}>*</Text>
               </Text>
@@ -203,33 +309,57 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
               {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
             </View>
 
-            <View style={styles.formGroup}>
+            <View style={styles.formGroup} ref={(ref) => fieldRefs.current['password'] = ref}>
               <Text style={styles.label}>
                 Password <Text style={styles.required}>*</Text>
               </Text>
-              <TextInput
-                style={[styles.input, errors.password && styles.inputError]}
-                value={formData.password}
-                onChangeText={(value) => updateField('password', value)}
-                placeholder="Min. 6 characters"
-                placeholderTextColor="#9ca3af"
-                secureTextEntry
-              />
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={[styles.input, styles.passwordInput, errors.password && styles.inputError]}
+                  value={formData.password}
+                  onChangeText={(value) => updateField('password', value)}
+                  placeholder="Min. 8 characters"
+                  placeholderTextColor="#9ca3af"
+                  secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity
+                  style={styles.passwordToggle}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} color="#9ca3af" />
+                  ) : (
+                    <Eye size={20} color="#9ca3af" />
+                  )}
+                </TouchableOpacity>
+              </View>
               {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
             </View>
 
-            <View style={styles.formGroup}>
+            <View style={styles.formGroup} ref={(ref) => fieldRefs.current['confirmPassword'] = ref}>
               <Text style={styles.label}>
                 Confirm Password <Text style={styles.required}>*</Text>
               </Text>
-              <TextInput
-                style={[styles.input, errors.confirmPassword && styles.inputError]}
-                value={formData.confirmPassword}
-                onChangeText={(value) => updateField('confirmPassword', value)}
-                placeholder="Re-enter password"
-                placeholderTextColor="#9ca3af"
-                secureTextEntry
-              />
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={[styles.input, styles.passwordInput, errors.confirmPassword && styles.inputError]}
+                  value={formData.confirmPassword}
+                  onChangeText={(value) => updateField('confirmPassword', value)}
+                  placeholder="Re-enter password"
+                  placeholderTextColor="#9ca3af"
+                  secureTextEntry={!showConfirmPassword}
+                />
+                <TouchableOpacity
+                  style={styles.passwordToggle}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff size={20} color="#9ca3af" />
+                  ) : (
+                    <Eye size={20} color="#9ca3af" />
+                  )}
+                </TouchableOpacity>
+              </View>
               {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
             </View>
           </View>
@@ -273,23 +403,24 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
               <Text style={styles.label}>
                 Date of Birth <Text style={styles.required}>*</Text>
               </Text>
-              <View style={styles.inputWithIcon}>
-                <Calendar size={20} color="#9ca3af" style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.input, styles.inputWithIconPadding, errors.dateOfBirth && styles.inputError]}
-                  value={formData.dateOfBirth}
-                  onChangeText={(value) => updateField('dateOfBirth', value)}
-                  placeholder="YYYY-MM-DD (e.g., 2005-01-15)"
-                  placeholderTextColor="#9ca3af"
-                />
-              </View>
-              {errors.dateOfBirth && <Text style={styles.errorText}>{errors.dateOfBirth}</Text>}
+              <TouchableOpacity
+                style={[styles.input, styles.datePickerButton, errors.birthdate && styles.inputError]}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Calendar size={20} color="#9ca3af" />
+                <Text style={[styles.datePickerText, formData.birthdate && styles.datePickerTextSelected]}>
+                  {formData.birthdate || 'Select date of birth'}
+                </Text>
+              </TouchableOpacity>
+              {errors.birthdate && <Text style={styles.errorText}>{errors.birthdate}</Text>}
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Gender</Text>
+              <Text style={styles.label}>
+                Gender <Text style={styles.required}>*</Text>
+              </Text>
               <View style={styles.genderButtons}>
-                {(['MALE', 'FEMALE', 'OTHER'] as const).map((gender) => (
+                {(['MALE', 'FEMALE'] as const).map((gender) => (
                   <TouchableOpacity
                     key={gender}
                     style={[
@@ -309,6 +440,7 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
                   </TouchableOpacity>
                 ))}
               </View>
+              {errors.gender && <Text style={styles.errorText}>{errors.gender}</Text>}
             </View>
 
             <View style={styles.formRow}>
@@ -316,25 +448,29 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
                 <Text style={styles.label}>
                   Grade Level <Text style={styles.required}>*</Text>
                 </Text>
-                <TextInput
-                  style={[styles.input, errors.gradeLevel && styles.inputError]}
-                  value={formData.gradeLevel}
-                  onChangeText={(value) => updateField('gradeLevel', value)}
-                  placeholder="e.g., Grade 10"
-                  placeholderTextColor="#9ca3af"
-                />
+                <TouchableOpacity
+                  style={[styles.input, styles.dropdownButton, errors.gradeLevel && styles.inputError]}
+                  onPress={() => setShowGradePicker(true)}
+                >
+                  <Text style={[styles.dropdownText, formData.gradeLevel && styles.dropdownTextSelected]}>
+                    {formData.gradeLevel || 'Grade'}
+                  </Text>
+                  <ChevronDown size={20} color="#9ca3af" />
+                </TouchableOpacity>
                 {errors.gradeLevel && <Text style={styles.errorText}>{errors.gradeLevel}</Text>}
               </View>
 
               <View style={[styles.formGroup, styles.formGroupHalf]}>
                 <Text style={styles.label}>Section</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.section}
-                  onChangeText={(value) => updateField('section', value)}
-                  placeholder="e.g., A"
-                  placeholderTextColor="#9ca3af"
-                />
+                <TouchableOpacity
+                  style={[styles.input, styles.dropdownButton]}
+                  onPress={() => setShowSectionPicker(true)}
+                >
+                  <Text style={[styles.dropdownText, formData.section && styles.dropdownTextSelected]}>
+                    {formData.section || 'Section'}
+                  </Text>
+                  <ChevronDown size={20} color="#9ca3af" />
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -430,12 +566,209 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
             ) : (
               <>
                 <UserPlus size={20} color="#ffffff" />
-                <Text style={styles.createButtonText}>Create Student</Text>
+                <Text style={styles.createButtonText}>Create</Text>
               </>
             )}
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Grade Level Picker Modal */}
+      <Modal
+        visible={showGradePicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowGradePicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowGradePicker(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Grade Level</Text>
+            <ScrollView style={styles.modalScrollView}>
+              {gradeLevels.map((grade) => (
+                <TouchableOpacity
+                  key={grade}
+                  style={[
+                    styles.modalOption,
+                    formData.gradeLevel === grade && styles.modalOptionSelected
+                  ]}
+                  onPress={() => {
+                    updateField('gradeLevel', grade);
+                    setShowGradePicker(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.modalOptionText,
+                    formData.gradeLevel === grade && styles.modalOptionTextSelected
+                  ]}>
+                    {grade}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Section Picker Modal */}
+      <Modal
+        visible={showSectionPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSectionPicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowSectionPicker(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Section</Text>
+            <ScrollView style={styles.modalScrollView}>
+              {sections.map((section) => (
+                <TouchableOpacity
+                  key={section}
+                  style={[
+                    styles.modalOption,
+                    formData.section === section && styles.modalOptionSelected
+                  ]}
+                  onPress={() => {
+                    updateField('section', section);
+                    setShowSectionPicker(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.modalOptionText,
+                    formData.section === section && styles.modalOptionTextSelected
+                  ]}>
+                    {section}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Date Picker Modal */}
+      <Modal
+        visible={showDatePicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDatePicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowDatePicker(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Date of Birth</Text>
+            
+            <View style={styles.datePickerContainer}>
+              {/* Year Picker */}
+              <View style={styles.datePickerColumn}>
+                <Text style={styles.datePickerLabel}>Year</Text>
+                <ScrollView style={styles.dateScrollView}>
+                  {Array.from({ length: 30 }, (_, i) => 2000 + i).reverse().map((year) => (
+                    <TouchableOpacity
+                      key={year}
+                      style={[
+                        styles.dateOption,
+                        tempDate.year === year.toString() && styles.dateOptionSelected
+                      ]}
+                      onPress={() => setTempDate(prev => ({ ...prev, year: year.toString() }))}
+                    >
+                      <Text style={[
+                        styles.dateOptionText,
+                        tempDate.year === year.toString() && styles.dateOptionTextSelected
+                      ]}>
+                        {year}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* Month Picker */}
+              <View style={styles.datePickerColumn}>
+                <Text style={styles.datePickerLabel}>Month</Text>
+                <ScrollView style={styles.dateScrollView}>
+                  {Array.from({ length: 12 }, (_, i) => {
+                    const month = (i + 1).toString().padStart(2, '0');
+                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    return (
+                      <TouchableOpacity
+                        key={month}
+                        style={[
+                          styles.dateOption,
+                          tempDate.month === month && styles.dateOptionSelected
+                        ]}
+                        onPress={() => setTempDate(prev => ({ ...prev, month }))}
+                      >
+                        <Text style={[
+                          styles.dateOptionText,
+                          tempDate.month === month && styles.dateOptionTextSelected
+                        ]}>
+                          {monthNames[i]}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              {/* Day Picker */}
+              <View style={styles.datePickerColumn}>
+                <Text style={styles.datePickerLabel}>Day</Text>
+                <ScrollView style={styles.dateScrollView}>
+                  {Array.from({ length: 31 }, (_, i) => {
+                    const day = (i + 1).toString().padStart(2, '0');
+                    return (
+                      <TouchableOpacity
+                        key={day}
+                        style={[
+                          styles.dateOption,
+                          tempDate.day === day && styles.dateOptionSelected
+                        ]}
+                        onPress={() => setTempDate(prev => ({ ...prev, day }))}
+                      >
+                        <Text style={[
+                          styles.dateOptionText,
+                          tempDate.day === day && styles.dateOptionTextSelected
+                        ]}>
+                          {day}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => setShowDatePicker(false)}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalConfirmButton]}
+                onPress={() => {
+                  updateField('birthdate', `${tempDate.year}-${tempDate.month}-${tempDate.day}`);
+                  setShowDatePicker(false);
+                }}
+              >
+                <Text style={styles.modalConfirmButtonText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -519,6 +852,18 @@ const styles = StyleSheet.create({
     color: '#111827',
     backgroundColor: '#ffffff',
   },
+  passwordContainer: {
+    position: 'relative',
+  },
+  passwordInput: {
+    paddingRight: 50,
+  },
+  passwordToggle: {
+    position: 'absolute',
+    right: 12,
+    top: 14,
+    padding: 4,
+  },
   inputError: {
     borderColor: '#ef4444',
   },
@@ -601,6 +946,136 @@ const styles = StyleSheet.create({
     backgroundColor: '#9ca3af',
   },
   createButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  dropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingRight: 12,
+  },
+  dropdownText: {
+    fontSize: 16,
+    color: '#9ca3af',
+  },
+  dropdownTextSelected: {
+    color: '#111827',
+  },
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  datePickerText: {
+    fontSize: 16,
+    color: '#9ca3af',
+  },
+  datePickerTextSelected: {
+    color: '#111827',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 16,
+  },
+  modalScrollView: {
+    maxHeight: 300,
+  },
+  modalOption: {
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+    backgroundColor: '#f9fafb',
+  },
+  modalOptionSelected: {
+    backgroundColor: '#14b8a6',
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: '#111827',
+  },
+  modalOptionTextSelected: {
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  datePickerContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  datePickerColumn: {
+    flex: 1,
+  },
+  datePickerLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  dateScrollView: {
+    maxHeight: 200,
+  },
+  dateOption: {
+    padding: 12,
+    borderRadius: 6,
+    marginBottom: 4,
+    backgroundColor: '#f9fafb',
+    alignItems: 'center',
+  },
+  dateOptionSelected: {
+    backgroundColor: '#14b8a6',
+  },
+  dateOptionText: {
+    fontSize: 14,
+    color: '#111827',
+  },
+  dateOptionTextSelected: {
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  modalButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: '#f3f4f6',
+  },
+  modalCancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  modalConfirmButton: {
+    backgroundColor: '#14b8a6',
+  },
+  modalConfirmButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
