@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
-import { Activity, Heart, Thermometer, Wind, AlertTriangle, Bluetooth } from 'lucide-react-native';
+import { Activity, Heart, Thermometer, Wind, AlertTriangle } from 'lucide-react-native';
 import { studentService } from '../../src/services/api';
 
 interface StudentDashboardProps {
@@ -79,6 +79,41 @@ export function StudentDashboard({ onNavigate }: StudentDashboardProps) {
     }
   };
 
+  // Check if data is fresh (within 30 seconds)
+  const getDataFreshness = (timestamp: string) => {
+    const now = Date.now();
+    const vitalTime = new Date(timestamp).getTime();
+    const diffMs = now - vitalTime;
+    const diffSec = Math.floor(diffMs / 1000);
+
+    if (diffSec <= 30) {
+      return {
+        isFresh: true,
+        label: 'Live',
+        color: '#16a34a',
+        bgColor: '#dcfce7',
+        timeAgo: `Updated ${diffSec}s ago`
+      };
+    } else if (diffSec <= 60) {
+      return {
+        isFresh: false,
+        label: 'Recent',
+        color: '#f59e0b',
+        bgColor: '#fef3c7',
+        timeAgo: `Updated ${diffSec}s ago`
+      };
+    } else {
+      const diffMin = Math.floor(diffSec / 60);
+      return {
+        isFresh: false,
+        label: 'Outdated',
+        color: '#dc2626',
+        bgColor: '#fee2e2',
+        timeAgo: `Last update: ${diffMin}m ago`
+      };
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -101,12 +136,6 @@ export function StudentDashboard({ onNavigate }: StudentDashboardProps) {
           <Text style={styles.greeting}>Hello, {profile?.firstName}!</Text>
           <Text style={styles.subgreeting}>Here's your health status today</Text>
         </View>
-        <TouchableOpacity 
-          style={styles.bluetoothButton}
-          onPress={() => onNavigate('connectDevice')}
-        >
-          <Bluetooth size={24} color="#ffffff" />
-        </TouchableOpacity>
       </View>
 
       {/* Overall Status Card */}
@@ -133,12 +162,28 @@ export function StudentDashboard({ onNavigate }: StudentDashboardProps) {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Latest Vitals</Text>
           <TouchableOpacity onPress={() => onNavigate('vitalsHistory')}>
-            <Text style={styles.viewAllText}>View History</Text>
+            <Text style={styles.viewAllText}>View Statistics</Text>
           </TouchableOpacity>
         </View>
 
         {latestVitals ? (
           <>
+            {/* Data Freshness Indicator */}
+            {(() => {
+              const freshness = getDataFreshness(latestVitals.timestamp);
+              return (
+                <View style={[styles.freshnessBadge, { backgroundColor: freshness.bgColor }]}>
+                  <View style={[styles.freshnessDot, { backgroundColor: freshness.color }]} />
+                  <Text style={[styles.freshnessLabel, { color: freshness.color }]}>
+                    {freshness.label}
+                  </Text>
+                  <Text style={[styles.freshnessTime, { color: freshness.color }]}>
+                    • {freshness.timeAgo}
+                  </Text>
+                </View>
+              );
+            })()}
+
             <View style={styles.vitalsGrid}>
               {/* Heart Rate */}
               <View style={styles.vitalCard}>
@@ -252,15 +297,8 @@ export function StudentDashboard({ onNavigate }: StudentDashboardProps) {
             <Activity size={48} color="#d1d5db" />
             <Text style={styles.emptyStateText}>No vitals recorded yet</Text>
             <Text style={styles.emptyStateSubtext}>
-              Connect your health device to start monitoring your vitals
+              Device sensor will send vitals data via HTTP
             </Text>
-            <TouchableOpacity 
-              style={styles.connectDeviceButton}
-              onPress={() => onNavigate('connectDevice')}
-            >
-              <Bluetooth size={20} color="#ffffff" />
-              <Text style={styles.connectDeviceButtonText}>Connect Device</Text>
-            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -367,14 +405,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#ccfbf1',
   },
-  bluetoothButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   statusCard: {
     margin: 16,
     backgroundColor: '#ffffff',
@@ -428,6 +458,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#0d9488',
     fontWeight: '500',
+  },
+  freshnessBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    marginBottom: 12,
+    alignSelf: 'flex-start',
+  },
+  freshnessDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  freshnessLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  freshnessTime: {
+    fontSize: 12,
+    marginLeft: 4,
   },
   vitalsGrid: {
     flexDirection: 'row',
@@ -576,21 +629,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9ca3af',
     textAlign: 'center',
-    marginBottom: 20,
-  },
-  connectDeviceButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#0d9488',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginTop: 8,
-  },
-  connectDeviceButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
   },
 });

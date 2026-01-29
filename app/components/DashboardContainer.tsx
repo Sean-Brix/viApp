@@ -41,6 +41,13 @@ export function DashboardContainer({ onStudentClick, onAddStudent }: DashboardCo
 
   useEffect(() => {
     fetchStudents();
+    
+    // Auto-refresh every 10 seconds for real-time updates
+    const interval = setInterval(() => {
+      fetchStudents(true);
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, [fetchStudents]);
 
   const handleRefresh = useCallback(() => {
@@ -52,11 +59,11 @@ export function DashboardContainer({ onStudentClick, onAddStudent }: DashboardCo
   const transformedStudents: Student[] = students.map(student => {
     const latestVital = student.latestVital;
     
-    // Determine overall status based on vital status
+    // Use student status from backend
     let overallStatus = 'Stable';
-    if (latestVital?.status === 'CRITICAL' || student.activeAlerts > 0) {
+    if (student.status === 'CRITICAL') {
       overallStatus = 'Critical';
-    } else if (latestVital?.status === 'WARNING') {
+    } else if (student.status === 'NEEDS_ATTENTION') {
       overallStatus = 'Needs Attention';
     }
 

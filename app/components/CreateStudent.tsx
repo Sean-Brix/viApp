@@ -25,12 +25,15 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
     confirmPassword: '',
     firstName: '',
     lastName: '',
-    dateOfBirth: '',
-    gender: 'MALE' as 'MALE' | 'FEMALE' | 'OTHER',
+    birthdate: '',
+    gender: 'MALE' as 'MALE' | 'FEMALE',
+    gradeLevel: 'Grade 10',
+    section: '',
     contactNumber: '',
-    address: '',
     guardianName: '',
     guardianContact: '',
+    weight: '',
+    height: '',
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -69,14 +72,30 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
       newErrors.lastName = 'Last name is required';
     }
 
-    if (!formData.dateOfBirth) {
-      newErrors.dateOfBirth = 'Date of birth is required';
+    if (!formData.birthdate) {
+      newErrors.birthdate = 'Date of birth is required';
     } else {
       // Validate date format (YYYY-MM-DD)
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(formData.dateOfBirth)) {
-        newErrors.dateOfBirth = 'Date format must be YYYY-MM-DD';
+      if (!dateRegex.test(formData.birthdate)) {
+        newErrors.birthdate = 'Date format must be YYYY-MM-DD';
       }
+    }
+
+    if (!formData.gradeLevel.trim()) {
+      newErrors.gradeLevel = 'Grade level is required';
+    }
+
+    if (!formData.contactNumber.trim()) {
+      newErrors.contactNumber = 'Contact number is required';
+    }
+
+    if (!formData.guardianName.trim()) {
+      newErrors.guardianName = 'Guardian name is required';
+    }
+
+    if (!formData.guardianContact.trim()) {
+      newErrors.guardianContact = 'Guardian contact is required';
     }
 
     setErrors(newErrors);
@@ -97,12 +116,15 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
         password: formData.password,
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
-        dateOfBirth: formData.dateOfBirth,
+        birthdate: formData.birthdate,
         gender: formData.gender,
-        contactNumber: formData.contactNumber.trim() || undefined,
-        address: formData.address.trim() || undefined,
-        guardianName: formData.guardianName.trim() || undefined,
-        guardianContact: formData.guardianContact.trim() || undefined,
+        gradeLevel: formData.gradeLevel.trim(),
+        section: formData.section.trim() || undefined,
+        contactNumber: formData.contactNumber.trim(),
+        guardianName: formData.guardianName.trim(),
+        guardianContact: formData.guardianContact.trim(),
+        weight: formData.weight ? parseFloat(formData.weight) : undefined,
+        height: formData.height ? parseFloat(formData.height) : undefined,
       });
 
       Alert.alert(
@@ -289,58 +311,101 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
               </View>
             </View>
 
+            <View style={styles.formRow}>
+              <View style={[styles.formGroup, styles.formGroupHalf]}>
+                <Text style={styles.label}>
+                  Grade Level <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={[styles.input, errors.gradeLevel && styles.inputError]}
+                  value={formData.gradeLevel}
+                  onChangeText={(value) => updateField('gradeLevel', value)}
+                  placeholder="e.g., Grade 10"
+                  placeholderTextColor="#9ca3af"
+                />
+                {errors.gradeLevel && <Text style={styles.errorText}>{errors.gradeLevel}</Text>}
+              </View>
+
+              <View style={[styles.formGroup, styles.formGroupHalf]}>
+                <Text style={styles.label}>Section</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.section}
+                  onChangeText={(value) => updateField('section', value)}
+                  placeholder="e.g., A"
+                  placeholderTextColor="#9ca3af"
+                />
+              </View>
+            </View>
+
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Contact Number</Text>
+              <Text style={styles.label}>
+                Contact Number <Text style={styles.required}>*</Text>
+              </Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, errors.contactNumber && styles.inputError]}
                 value={formData.contactNumber}
                 onChangeText={(value) => updateField('contactNumber', value)}
                 placeholder="e.g., +63 912 345 6789"
                 placeholderTextColor="#9ca3af"
                 keyboardType="phone-pad"
               />
+              {errors.contactNumber && <Text style={styles.errorText}>{errors.contactNumber}</Text>}
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Address</Text>
+              <Text style={styles.label}>
+                Guardian Name <Text style={styles.required}>*</Text>
+              </Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
-                value={formData.address}
-                onChangeText={(value) => updateField('address', value)}
-                placeholder="Enter full address"
-                placeholderTextColor="#9ca3af"
-                multiline
-                numberOfLines={3}
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* Guardian Information */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Guardian Information</Text>
-          <View style={styles.form}>
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Guardian Name</Text>
-              <TextInput
-                style={styles.input}
+                style={[styles.input, errors.guardianName && styles.inputError]}
                 value={formData.guardianName}
                 onChangeText={(value) => updateField('guardianName', value)}
-                placeholder="e.g., Jane Doe"
+                placeholder="e.g., Maria Doe"
                 placeholderTextColor="#9ca3af"
               />
+              {errors.guardianName && <Text style={styles.errorText}>{errors.guardianName}</Text>}
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Guardian Contact</Text>
+              <Text style={styles.label}>
+                Guardian Contact <Text style={styles.required}>*</Text>
+              </Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, errors.guardianContact && styles.inputError]}
                 value={formData.guardianContact}
                 onChangeText={(value) => updateField('guardianContact', value)}
                 placeholder="e.g., +63 912 345 6789"
                 placeholderTextColor="#9ca3af"
                 keyboardType="phone-pad"
               />
+              {errors.guardianContact && <Text style={styles.errorText}>{errors.guardianContact}</Text>}
+            </View>
+
+            <View style={styles.formRow}>
+              <View style={[styles.formGroup, styles.formGroupHalf]}>
+                <Text style={styles.label}>Weight (kg)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.weight}
+                  onChangeText={(value) => updateField('weight', value)}
+                  placeholder="e.g., 52"
+                  placeholderTextColor="#9ca3af"
+                  keyboardType="decimal-pad"
+                />
+              </View>
+
+              <View style={[styles.formGroup, styles.formGroupHalf]}>
+                <Text style={styles.label}>Height (cm)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.height}
+                  onChangeText={(value) => updateField('height', value)}
+                  placeholder="e.g., 160"
+                  placeholderTextColor="#9ca3af"
+                  keyboardType="decimal-pad"
+                />
+              </View>
             </View>
           </View>
         </View>

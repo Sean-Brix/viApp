@@ -58,16 +58,16 @@ export function EditStudent({ studentId, onBack, onSuccess }: EditStudentProps) 
       const student = await adminService.getStudentById(studentId);
       
       setFormData({
-        username: student.username,
-        email: student.email,
-        firstName: student.student.firstName,
-        lastName: student.student.lastName,
-        dateOfBirth: student.student.dateOfBirth.split('T')[0], // Convert to YYYY-MM-DD
-        gender: student.student.gender,
-        contactNumber: student.student.contactNumber || '',
-        address: student.student.address || '',
-        guardianName: student.student.guardianName || '',
-        guardianContact: student.student.guardianContact || '',
+        username: student.user?.username || '',
+        email: student.user?.email || '',
+        firstName: student.firstName,
+        lastName: student.lastName,
+        dateOfBirth: student.birthdate ? new Date(student.birthdate).toISOString().split('T')[0] : '',
+        gender: student.gender || 'MALE',
+        contactNumber: student.contactNumber || '',
+        address: student.address || '',
+        guardianName: student.guardianName || '',
+        guardianContact: student.guardianContact || '',
       });
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to load student data');
@@ -119,12 +119,13 @@ export function EditStudent({ studentId, onBack, onSuccess }: EditStudentProps) 
         email: formData.email.trim().toLowerCase(),
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
-        dateOfBirth: formData.dateOfBirth,
+        birthdate: formData.dateOfBirth,
         gender: formData.gender,
-        contactNumber: formData.contactNumber.trim() || undefined,
-        address: formData.address.trim() || undefined,
-        guardianName: formData.guardianName.trim() || undefined,
-        guardianContact: formData.guardianContact.trim() || undefined,
+        gradeLevel: formData.gradeLevel,
+        section: formData.section?.trim() || undefined,
+        weight: formData.weight ? parseFloat(formData.weight) : undefined,
+        height: formData.height ? parseFloat(formData.height) : undefined,
+        contactNumber: formData.contactNumber?.trim() || undefined,
       });
 
       Alert.alert(
@@ -138,6 +139,7 @@ export function EditStudent({ studentId, onBack, onSuccess }: EditStudentProps) 
         ]
       );
     } catch (error: any) {
+      console.error('Update error:', error);
       Alert.alert('Error', error.message || 'Failed to update student');
     } finally {
       setSaving(false);

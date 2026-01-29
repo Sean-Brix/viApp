@@ -29,25 +29,26 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       setLoading(true);
       
       // Load students
-      const studentsResponse = await adminService.getAllStudents(1, 10);
-      const studentsData = studentsResponse.data.students || [];
+      const studentsResponse = await adminService.getStudents({ page: 1, limit: 10 });
+      const studentsData = studentsResponse.students || [];
       setStudents(studentsData);
       
       // Load alerts
-      const alertsResponse = await adminService.getAllAlerts(1, 10);
-      const alertsData = alertsResponse.data.alerts || [];
+      const alertsResponse = await adminService.getAlerts({ page: 1, limit: 10 });
+      const alertsData = alertsResponse.alerts || [];
       setAlerts(alertsData);
       
       // Load devices
-      const devicesData = await adminService.getAllDevices();
+      const devicesResponse = await adminService.getDevices({ page: 1, limit: 100 });
+      const devicesData = devicesResponse.devices || [];
       setDevices(devicesData);
       
       // Calculate stats
-      const criticalAlerts = alertsData.filter((a: any) => a.severity === 'CRITICAL').length;
+      const criticalAlerts = alertsData.filter((a: any) => a.severity === 'HIGH' || a.severity === 'CRITICAL').length;
       const activeDevices = devicesData.filter((d: any) => d.status === 'ACTIVE').length;
       
       setStats({
-        totalStudents: studentsData.length,
+        totalStudents: studentsResponse.total || studentsData.length,
         activeDevices,
         criticalAlerts,
       });
@@ -142,6 +143,24 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             <Text style={styles.actionButtonText}>Register Device</Text>
           </TouchableOpacity>
         </View>
+
+        <View style={[styles.actionsContainer, { marginTop: 12 }]}>
+          <TouchableOpacity 
+            style={[styles.actionButton, { backgroundColor: '#8b5cf6' }]}
+            onPress={() => onNavigate('monitorStudents')}
+          >
+            <Activity size={20} color="#ffffff" />
+            <Text style={styles.actionButtonText}>Monitor Students</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.actionButton, { backgroundColor: '#f59e0b' }]}
+            onPress={() => onNavigate('deviceManagement')}
+          >
+            <Users size={20} color="#ffffff" />
+            <Text style={styles.actionButtonText}>Manage Devices</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Search Bar */}
@@ -162,7 +181,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Students</Text>
-          <TouchableOpacity onPress={() => onNavigate('students')}>
+          <TouchableOpacity onPress={() => onNavigate('studentsList')}>
             <Text style={styles.viewAllText}>View All</Text>
           </TouchableOpacity>
         </View>

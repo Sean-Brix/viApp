@@ -3,19 +3,33 @@ import { cacheService } from '../cache.service';
 
 export interface StudentProfile {
   id: string;
-  studentId: string;
   firstName: string;
   lastName: string;
-  dateOfBirth: string;
+  birthdate: string;
   gender: string;
+  gradeLevel: string;
+  section?: string;
+  weight?: number;
+  height?: number;
   contactNumber?: string;
   address?: string;
   guardianName?: string;
   guardianContact?: string;
-  medicalHistory?: any;
+  status?: string;
+  age?: number;
+  bmi?: number;
+  medicalHistory?: any[];
   emergencyContacts?: any[];
   device?: any;
-  user?: any;
+  assignedDevice?: any;
+  latestVital?: VitalReading;
+  user?: {
+    username: string;
+    email: string;
+    isActive: boolean;
+  };
+  vitals?: VitalReading[];
+  alerts?: Alert[];
 }
 
 export interface VitalReading {
@@ -112,6 +126,25 @@ class StudentService {
   }
 
   /**
+   * Get vitals statistics (day/week/month)
+   */
+  async getVitalsStatistics(): Promise<any> {
+    try {
+      console.log('📊 Fetching vitals statistics...');
+      const response = await apiClient.get('/student/vitals/statistics');
+      console.log('✅ Statistics response:', response.data);
+      return response.data.data;
+    } catch (error: any) {
+      console.error('❌ Statistics Error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      throw new Error(error.response?.data?.error || error.response?.data?.message || 'Failed to fetch statistics');
+    }
+  }
+
+  /**
    * Get vitals history (with caching)
    */
   async getVitalsHistory(params?: {
@@ -130,7 +163,9 @@ class StudentService {
         }
       }
 
+      console.log('📡 Fetching vitals history...', { params });
       const response = await apiClient.get('/student/vitals/history', { params });
+      console.log('✅ Vitals response:', response.data);
       const data = response.data.data;
 
       // Cache the result if no date filters
@@ -140,12 +175,20 @@ class StudentService {
 
       return data;
     } catch (error: any) {
+      console.error('❌ Vitals History Error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+      });
+      
       // Try to return cached data on network error
       const cached = await cacheService.getVitalsHistory('current');
       if (cached) {
+        console.log('✅ Returning cached vitals data');
         return cached;
       }
-      throw new Error(error.response?.data?.message || 'Failed to fetch vitals history');
+      throw new Error(error.response?.data?.error || error.response?.data?.message || 'Failed to fetch vitals history');
     }
   }
 

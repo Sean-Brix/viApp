@@ -4,12 +4,18 @@ import { StatusBar } from 'expo-status-bar';
 import { LoginScreen } from './components/LoginScreen';
 import { AdminDashboard } from './components/AdminDashboard';
 import { StudentDashboard } from './components/StudentDashboard';
-import { StudentVitalsHistory } from './components/StudentVitalsHistory';
+import { StudentVitalsStatistics } from './components/StudentVitalsStatistics';
 import { StudentProfile } from './components/StudentProfile';
 import { AdminStudentsList } from './components/AdminStudentsList';
-import { BluetoothDeviceConnection } from './components/BluetoothDeviceConnection';
 import { AlertsScreen } from './components/AlertsScreen';
 import { SettingsScreen } from './components/SettingsScreen';
+import { CreateStudent } from './components/CreateStudent';
+import { EditStudent } from './components/EditStudent';
+import { DeviceRegistration } from './components/DeviceRegistration';
+import { DeviceManagement } from './components/DeviceManagement';
+import { AdminStudentsMonitor } from './components/AdminStudentsMonitor';
+import { AdminStudentDetails } from './components/AdminStudentDetails';
+import { SchoolHealthStats } from './components/SchoolHealthStats';
 import { BottomNav } from './components/BottomNav';
 import { Screen, UserType } from './types';
 
@@ -17,7 +23,7 @@ export default function Index() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userType, setUserType] = useState<UserType>('admin');
   const [activeScreen, setActiveScreen] = useState<Screen>('home');
-  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
   const handleLogin = (type: UserType) => {
     setUserType(type);
@@ -33,7 +39,18 @@ export default function Index() {
   };
 
   const handleNavigate = (screen: Screen | string) => {
-    if (screen === 'vitalsHistory' || screen === 'profile' || screen === 'studentsList' || screen === 'connectDevice') {
+    // Handle student detail navigation
+    if (screen.startsWith('studentDetail:')) {
+      const studentId = screen.split(':')[1];
+      setSelectedStudentId(studentId);
+      setActiveScreen('studentDetail' as any);
+    } else if (screen.startsWith('editStudent:')) {
+      const studentId = screen.split(':')[1];
+      setSelectedStudentId(studentId);
+      setActiveScreen('editStudent' as any);
+    } else if (screen === 'vitalsHistory' || screen === 'profile' || screen === 'studentsList' || 
+        screen === 'connectDevice' || screen === 'createStudent' || screen === 'registerDevice' || 
+        screen === 'deviceManagement' || screen === 'monitorStudents' || screen === 'editStudent') {
       setActiveScreen(screen as any);
     } else {
       setActiveScreen(screen as Screen);
@@ -46,10 +63,14 @@ export default function Index() {
     setActiveScreen('home');
   };
 
-  const handleStudentSelect = (studentId: number) => {
+  const handleStudentSelect = (studentId: string) => {
     setSelectedStudentId(studentId);
-    // Navigate to student detail screen when implemented
-    console.log('Selected student:', studentId);
+    setActiveScreen('studentDetail' as any);
+  };
+
+  const handleEditStudent = (studentId: string) => {
+    setSelectedStudentId(studentId);
+    setActiveScreen('editStudent' as any);
   };
 
   const renderScreen = () => {
@@ -64,11 +85,72 @@ export default function Index() {
             <AdminStudentsList
               onBack={() => setActiveScreen('home')}
               onStudentSelect={handleStudentSelect}
+              onEditStudent={handleEditStudent}
             />
+          );
+        
+        case 'createStudent' as any:
+          return (
+            <CreateStudent
+              onBack={() => setActiveScreen('home')}
+              onSuccess={() => setActiveScreen('home')}
+            />
+          );
+        
+        case 'editStudent' as any:
+          return selectedStudentId ? (
+            <EditStudent
+              studentId={selectedStudentId}
+              onBack={() => setActiveScreen('studentsList')}
+              onSuccess={() => setActiveScreen('studentsList')}
+            />
+          ) : null;
+        
+        case 'registerDevice' as any:
+          return (
+            <DeviceRegistration
+              onBack={() => setActiveScreen('home')}
+              onSuccess={() => setActiveScreen('home')}
+            />
+          );
+        
+        case 'deviceManagement' as any:
+          return (
+            <DeviceManagement
+              onBack={() => setActiveScreen('home')}
+              onRegisterDevice={() => setActiveScreen('registerDevice' as any)}
+            />
+          );
+        
+        case 'monitorStudents' as any:
+          return (
+            <AdminStudentsMonitor
+              onBack={() => setActiveScreen('home')}
+              onAssignDevice={(studentId) => {
+                setSelectedStudentId(studentId);
+                setActiveScreen('deviceManagement' as any);
+              }}
+            />
+          );
+        
+        case 'studentDetail' as any:
+          return selectedStudentId ? (
+            <AdminStudentDetails
+              studentId={selectedStudentId}
+              onBack={() => {
+                setSelectedStudentId(null);
+                setActiveScreen('home');
+              }}
+            />
+          ) : (
+            <AdminDashboard onNavigate={handleNavigate} />
           );
         
         case 'alerts':
           return <AlertsScreen userType="admin" />;
+        
+        case 'history':
+          return <SchoolHealthStats onBack={() => setActiveScreen('home')} />;
         
         case 'settings':
           return <SettingsScreen onLogout={handleLogout} />;
@@ -86,20 +168,12 @@ export default function Index() {
         
         case 'vitalsHistory':
           return (
-            <StudentVitalsHistory onBack={() => setActiveScreen('home')} />
+            <StudentVitalsStatistics onBack={() => setActiveScreen('home')} />
           );
         
         case 'profile':
           return (
             <StudentProfile onBack={() => setActiveScreen('home')} />
-          );
-        
-        case 'connectDevice':
-          return (
-            <BluetoothDeviceConnection 
-              onBack={() => setActiveScreen('home')}
-              onDeviceConnected={handleDeviceConnected}
-            />
           );
         
         case 'alerts':

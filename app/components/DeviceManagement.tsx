@@ -11,28 +11,33 @@ import {
 } from 'react-native';
 import { ChevronLeft, Plus, Smartphone, UserPlus, UserMinus, AlertCircle } from 'lucide-react-native';
 import { adminService } from '../../src/services/api';
+import { StudentSelectionModal } from './StudentSelectionModal';
 
 interface Device {
   id: string;
   deviceId: string;
-  serialNumber: string;
-  model?: string;
-  manufacturer?: string;
+  deviceName?: string;
+  deviceType?: string;
+  macAddress?: string;
   status: string;
-  assignedStudent?: {
+  student?: {
     id: string;
     firstName: string;
     lastName: string;
+    gradeLevel?: string;
   };
   lastSyncedAt?: string;
 }
 
 interface Student {
   id: string;
-  username: string;
-  student: {
-    firstName: string;
-    lastName: string;
+  firstName: string;
+  lastName: string;
+  gradeLevel: string;
+  section?: string;
+  user?: {
+    username: string;
+    email: string;
   };
 }
 
@@ -46,6 +51,9 @@ export function DeviceManagement({ onBack, onRegisterDevice }: DeviceManagementP
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showStudentModal, setShowStudentModal] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
+  const [availableStudents, setAvailableStudents] = useState<Student[]>([]);
 
   useEffect(() => {
     loadData();
@@ -56,11 +64,16 @@ export function DeviceManagement({ onBack, onRegisterDevice }: DeviceManagementP
       setLoading(true);
       const [devicesData, studentsData] = await Promise.all([
         adminService.getDevices(),
-        adminService.getStudents(),
+        adminService.getStudents({ forceRefresh: true, limit: 1000 }),
       ]);
-      setDevices(devicesData);
-      setStudents(studentsData);
+      console.log('Devices loaded:', devicesData.devices?.length || 0);
+      console.log('Students loaded:', studentsData.students?.length || 0);
+      console.log('First student sample:', studentsData.students?.[0]);
+      console.log('Students data structure:', JSON.stringify(studentsData, null, 2).substring(0, 500));
+      setDevices(devicesData.devices || []);
+      setStudents(studentsData.students || []);
     } catch (error: any) {
+      console.error('Load data error:', error);
       Alert.alert('Error', error.message || 'Failed to load data');
     } finally {
       setLoading(false);
@@ -74,38 +87,44 @@ export function DeviceManagement({ onBack, onRegisterDevice }: DeviceManagementP
   };
 
   const handleAssignDevice = (device: Device) => {
-    // Filter out students who already have devices
-    const availableStudents = students.filter(
-      (student) => !devices.some(
-        (d) => d.assignedStudent?.id === student.id && d.id !== device.id
-      )
+    // Filter out students who already have devices assigned
+    const filtered = students.filter(
+      (student) => {
+        // Check if this student has a device assigned (excluding the current device being reassigned)
+        const hasDevice = devices.some(
+          (d) => d.student?.id === student.id && d.id !== device.id
+        );
+        return !hasDevice;
+      }
     );
 
-    if (availableStudents.length === 0) {
-      Alert.alert('No Available Students', 'All students already have assigned devices');
+    console.log('=== ASSIGNMENT DEBUG ===');
+    console.log('Total students:', students.length);
+    console.log('Available students:', filtered.length);
+    console.log('Device:', device.deviceId);
+    console.log('First available student:', filtered[0]);
+    console.log('========================');
+
+    if (filtered.length === 0) {
+      Alert.alert(
+        'No Available Students', 
+        'All students already have assigned devices. Please add more students or unassign devices first.'
+      );
       return;
     }
 
-    // Show student picker
-    const studentOptions = availableStudents.map((student) => ({
-      text: `${student.student.firstName} ${student.student.lastName} (@${student.username})`,
-      onPress: () => confirmAssignment(device.id, student.id),
-    }));
-
-    Alert.alert(
-      'Assign Device',
-      `Select a student to assign ${device.deviceId}:`,
-      [
-        ...studentOptions,
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    setAvailableStudents(filtered);
+    setSelectedDevice(device);
+    setShowStudentModal(true);
   };
 
-  const confirmAssignment = async (deviceId: string, studentId: string) => {
+  const confirmAssignment = async (studentId: string) => {
+    if (!selectedDevice) return;
+    
     try {
-      await adminService.assignDevice(deviceId, studentId);
+      await adminService.assignDevice(selectedDevice.deviceId, studentId);
       Alert.alert('Success', 'Device assigned successfully');
+      setSelectedDevice(null);
       await loadData();
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to assign device');
@@ -113,13 +132,13 @@ export function DeviceManagement({ onBack, onRegisterDevice }: DeviceManagementP
   };
 
   const handleUnassignDevice = (device: Device) => {
-    if (!device.assignedStudent) {
+    if (!device.student) {
       return;
     }
 
     Alert.alert(
       'Unassign Device',
-      `Are you sure you want to unassign ${device.deviceId} from ${device.assignedStudent.firstName} ${device.assignedStudent.lastName}?`,
+      `Are you sure you want to unassign ${device.deviceId} from ${device.student.firstName} ${device.student.lastName}?`,
       [
         {
           text: 'Cancel',
@@ -207,13 +226,13 @@ export function DeviceManagement({ onBack, onRegisterDevice }: DeviceManagementP
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>
-              {devices.filter((d) => d.assignedStudent).length}
+              {devices.filter((d) => d.student).length}
             </Text>
             <Text style={styles.statLabel}>Assigned</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>
-              {devices.filter((d) => !d.assignedStudent).length}
+              {devices.filter((d) => !d.student).length}
             </Text>
             <Text style={styles.statLabel}>Available</Text>
           </View>
@@ -243,7 +262,9 @@ export function DeviceManagement({ onBack, onRegisterDevice }: DeviceManagementP
                     </View>
                     <View style={styles.deviceDetails}>
                       <Text style={styles.deviceId}>{device.deviceId}</Text>
-                      <Text style={styles.deviceSerial}>SN: {device.serialNumber}</Text>
+                      {device.deviceName && (
+                        <Text style={styles.deviceSerial}>{device.deviceName}</Text>
+                      )}
                     </View>
                   </View>
                   <View
@@ -263,21 +284,21 @@ export function DeviceManagement({ onBack, onRegisterDevice }: DeviceManagementP
                   </View>
                 </View>
 
-                {device.model && (
+                {device.deviceType && (
                   <View style={styles.deviceSpecs}>
                     <Text style={styles.specText}>
-                      {device.manufacturer && `${device.manufacturer} • `}
-                      {device.model}
+                      {device.deviceType}
+                      {device.macAddress && ` • ${device.macAddress}`}
                     </Text>
                   </View>
                 )}
 
-                {device.assignedStudent ? (
+                {device.student ? (
                   <View style={styles.assignmentSection}>
                     <View style={styles.assignedTo}>
                       <Text style={styles.assignedLabel}>Assigned to:</Text>
                       <Text style={styles.assignedStudent}>
-                        {device.assignedStudent.firstName} {device.assignedStudent.lastName}
+                        {device.student.firstName} {device.student.lastName}
                       </Text>
                     </View>
                     <View style={styles.lastSync}>
@@ -314,6 +335,21 @@ export function DeviceManagement({ onBack, onRegisterDevice }: DeviceManagementP
           </View>
         )}
       </ScrollView>
+
+      {/* Student Selection Modal */}
+      {selectedDevice && (
+        <StudentSelectionModal
+          visible={showStudentModal}
+          students={availableStudents}
+          deviceId={selectedDevice.deviceId}
+          onSelect={confirmAssignment}
+          onClose={() => {
+            setShowStudentModal(false);
+            setSelectedDevice(null);
+            setAvailableStudents([]);
+          }}
+        />
+      )}
     </View>
   );
 }

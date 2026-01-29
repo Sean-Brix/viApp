@@ -5,12 +5,22 @@ import { cacheService } from '../cache.service';
 export interface Device {
   id: string;
   deviceId: string;
-  serialNumber: string;
+  deviceName: string;
+  deviceType: string;
+  macAddress: string;
   status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
   batteryLevel?: number;
-  lastSync?: string;
-  assignedTo?: string;
-  student?: StudentProfile;
+  lastSyncedAt?: string;
+  studentId?: string;
+  student?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    user: {
+      username: string;
+      email: string;
+    };
+  };
 }
 
 export interface StudentListItem {
@@ -20,6 +30,7 @@ export interface StudentListItem {
   lastName: string;
   dateOfBirth: string;
   contactNumber?: string;
+  status: 'STABLE' | 'NEEDS_ATTENTION' | 'CRITICAL';
   device?: Device;
   latestVital?: VitalReading;
   activeAlerts: number;
@@ -103,22 +114,25 @@ class AdminService {
     password: string;
     firstName: string;
     lastName: string;
-    dateOfBirth: string;
-    gender: string;
+    birthdate: string;
+    gender: 'MALE' | 'FEMALE';
+    gradeLevel: string;
+    section?: string;
+    weight?: number;
+    height?: number;
     contactNumber?: string;
-    address?: string;
     guardianName?: string;
     guardianContact?: string;
   }): Promise<StudentProfile> {
     try {
-      const response = await apiClient.post('/admin/student/create', data);
+      const response = await apiClient.post('/admin/student', data);
       
       // Invalidate student list cache
       await cacheService.invalidateStudentCaches();
       
       return response.data.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to create student');
+      throw new Error(error.response?.data?.error?.message || error.response?.data?.message || 'Failed to create student');
     }
   }
 
@@ -223,15 +237,15 @@ class AdminService {
    */
   async registerDevice(data: {
     deviceId: string;
-    serialNumber: string;
-    model?: string;
-    manufacturer?: string;
+    deviceName: string;
+    deviceType: string;
+    macAddress: string;
   }): Promise<Device> {
     try {
       const response = await apiClient.post('/admin/device/register', data);
       return response.data.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to register device');
+      throw new Error(error.response?.data?.error?.message || error.response?.data?.message || 'Failed to register device');
     }
   }
 
@@ -241,9 +255,13 @@ class AdminService {
   async assignDevice(deviceId: string, studentId: string): Promise<Device> {
     try {
       const response = await apiClient.put(`/admin/device/${deviceId}/assign`, { studentId });
+      
+      // Invalidate student list cache
+      await cacheService.invalidateStudentCaches();
+      
       return response.data.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to assign device');
+      throw new Error(error.response?.data?.error?.message || error.response?.data?.message || 'Failed to assign device');
     }
   }
 
@@ -253,9 +271,13 @@ class AdminService {
   async unassignDevice(deviceId: string): Promise<Device> {
     try {
       const response = await apiClient.put(`/admin/device/${deviceId}/unassign`);
+      
+      // Invalidate student list cache
+      await cacheService.invalidateStudentCaches();
+      
       return response.data.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to unassign device');
+      throw new Error(error.response?.data?.error?.message || error.response?.data?.message || 'Failed to unassign device');
     }
   }
 

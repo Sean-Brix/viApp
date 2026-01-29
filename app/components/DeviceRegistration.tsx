@@ -20,9 +20,7 @@ interface DeviceRegistrationProps {
 export function DeviceRegistration({ onBack, onSuccess }: DeviceRegistrationProps) {
   const [formData, setFormData] = useState({
     deviceId: '',
-    serialNumber: '',
-    model: 'ViBand Pro',
-    manufacturer: 'ViHealth Technologies',
+    deviceName: '',
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -34,8 +32,8 @@ export function DeviceRegistration({ onBack, onSuccess }: DeviceRegistrationProp
       newErrors.deviceId = 'Device ID is required';
     }
 
-    if (!formData.serialNumber.trim()) {
-      newErrors.serialNumber = 'Serial Number is required';
+    if (!formData.deviceName.trim()) {
+      newErrors.deviceName = 'Device Name is required';
     }
 
     setErrors(newErrors);
@@ -52,9 +50,7 @@ export function DeviceRegistration({ onBack, onSuccess }: DeviceRegistrationProp
     try {
       await adminService.registerDevice({
         deviceId: formData.deviceId.trim(),
-        serialNumber: formData.serialNumber.trim(),
-        model: formData.model.trim() || undefined,
-        manufacturer: formData.manufacturer.trim() || undefined,
+        deviceName: formData.deviceName.trim(),
       });
 
       Alert.alert(
@@ -101,9 +97,9 @@ export function DeviceRegistration({ onBack, onSuccess }: DeviceRegistrationProp
         {/* Info Card */}
         <View style={styles.infoCard}>
           <Bluetooth size={32} color="#14b8a6" />
-          <Text style={styles.infoTitle}>ViBand Device Registration</Text>
+          <Text style={styles.infoTitle}>ESP32 Device Registration</Text>
           <Text style={styles.infoText}>
-            Register a new ViBand device to the system. Once registered, the device can be
+            Register a new ESP32 device to the system. Once registered, the device can be
             assigned to students for vital signs monitoring.
           </Text>
         </View>
@@ -119,7 +115,7 @@ export function DeviceRegistration({ onBack, onSuccess }: DeviceRegistrationProp
               style={[styles.input, errors.deviceId && styles.inputError]}
               value={formData.deviceId}
               onChangeText={(value) => updateField('deviceId', value)}
-              placeholder="e.g., VB-001-2024"
+              placeholder="e.g., ESP32-001"
               placeholderTextColor="#9ca3af"
               autoCapitalize="characters"
             />
@@ -127,47 +123,20 @@ export function DeviceRegistration({ onBack, onSuccess }: DeviceRegistrationProp
             <Text style={styles.hint}>Unique identifier for the device</Text>
           </View>
 
-          {/* Serial Number */}
+          {/* Device Name */}
           <View style={styles.formGroup}>
             <Text style={styles.label}>
-              Serial Number <Text style={styles.required}>*</Text>
+              Device Name <Text style={styles.required}>*</Text>
             </Text>
             <TextInput
-              style={[styles.input, errors.serialNumber && styles.inputError]}
-              value={formData.serialNumber}
-              onChangeText={(value) => updateField('serialNumber', value)}
-              placeholder="e.g., SN123456789"
-              placeholderTextColor="#9ca3af"
-              autoCapitalize="characters"
-            />
-            {errors.serialNumber && <Text style={styles.errorText}>{errors.serialNumber}</Text>}
-            <Text style={styles.hint}>Hardware serial number</Text>
-          </View>
-
-          {/* Model */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Model</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.model}
-              onChangeText={(value) => updateField('model', value)}
-              placeholder="e.g., ViBand Pro"
+              style={[styles.input, errors.deviceName && styles.inputError]}
+              value={formData.deviceName}
+              onChangeText={(value) => updateField('deviceName', value)}
+              placeholder="e.g., ESP32 Device 1"
               placeholderTextColor="#9ca3af"
             />
-            <Text style={styles.hint}>Device model name</Text>
-          </View>
-
-          {/* Manufacturer */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Manufacturer</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.manufacturer}
-              onChangeText={(value) => updateField('manufacturer', value)}
-              placeholder="e.g., ViHealth Technologies"
-              placeholderTextColor="#9ca3af"
-            />
-            <Text style={styles.hint}>Device manufacturer</Text>
+            {errors.deviceName && <Text style={styles.errorText}>{errors.deviceName}</Text>}
+            <Text style={styles.hint}>Friendly name for the device</Text>
           </View>
         </View>
 

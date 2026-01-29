@@ -5,10 +5,11 @@ import { adminService } from '../../src/services/api';
 
 interface AdminStudentsListProps {
   onBack: () => void;
-  onStudentSelect: (studentId: number) => void;
+  onStudentSelect: (studentId: string) => void;
+  onEditStudent?: (studentId: string) => void;
 }
 
-export function AdminStudentsList({ onBack, onStudentSelect }: AdminStudentsListProps) {
+export function AdminStudentsList({ onBack, onStudentSelect, onEditStudent }: AdminStudentsListProps) {
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -24,12 +25,12 @@ export function AdminStudentsList({ onBack, onStudentSelect }: AdminStudentsList
   const loadStudents = async () => {
     try {
       setLoading(true);
-      const data = await adminService.getAllStudents(1, 50);
-      setStudents(data);
-      setHasMore(data.length >= 50);
-    } catch (error) {
+      const response = await adminService.getStudents({ page: 1, limit: 50 });
+      setStudents(response.students || []);
+      setHasMore(response.students?.length >= 50);
+    } catch (error: any) {
       console.error('Failed to load students:', error);
-      Alert.alert('Error', 'Failed to load students');
+      Alert.alert('Error', error.message || 'Failed to load students');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -42,23 +43,23 @@ export function AdminStudentsList({ onBack, onStudentSelect }: AdminStudentsList
     loadStudents();
   };
 
-  const handleDeleteStudent = async (studentId: number, studentName: string) => {
+  const handleDeleteStudent = async (studentId: string, studentName: string) => {
     Alert.alert(
-      'Delete Student',
-      `Are you sure you want to delete ${studentName}? This action cannot be undone.`,
+      'Deactivate Student',
+      `Are you sure you want to deactivate ${studentName}? This will disable their account.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Deactivate',
           style: 'destructive',
           onPress: async () => {
             try {
-              await adminService.deleteStudent(studentId);
-              Alert.alert('Success', 'Student deleted successfully');
+              await adminService.deactivateStudent(studentId);
+              Alert.alert('Success', 'Student deactivated successfully');
               loadStudents();
-            } catch (error) {
-              console.error('Failed to delete student:', error);
-              Alert.alert('Error', 'Failed to delete student');
+            } catch (error: any) {
+              console.error('Failed to deactivate student:', error);
+              Alert.alert('Error', error.message || 'Failed to deactivate student');
             }
           },
         },
@@ -253,7 +254,7 @@ export function AdminStudentsList({ onBack, onStudentSelect }: AdminStudentsList
                 <View style={styles.actionButtons}>
                   <TouchableOpacity
                     style={styles.actionButton}
-                    onPress={() => onStudentSelect(student.id)}
+                    onPress={() => onEditStudent ? onEditStudent(student.id) : onStudentSelect(student.id)}
                   >
                     <Edit size={16} color="#0d9488" />
                     <Text style={styles.actionButtonText}>Edit</Text>

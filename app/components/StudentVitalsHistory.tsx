@@ -21,9 +21,9 @@ export function StudentVitalsHistory({ onBack }: StudentVitalsHistoryProps) {
   const loadVitals = async () => {
     try {
       setLoading(true);
-      const data = await studentService.getVitalsHistory(1, 20);
-      setVitals(data);
-      setHasMore(data.length >= 20);
+      const data = await studentService.getVitalsHistory({ page: 1, limit: 20 });
+      setVitals(data.vitals || []);
+      setHasMore(data.vitals.length >= 20);
     } catch (error) {
       console.error('Failed to load vitals:', error);
     } finally {

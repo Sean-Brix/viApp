@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
-import { AlertTriangle, ChevronLeft } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, RefreshControl, Alert } from 'react-native';
+import { AlertTriangle, ChevronLeft, CheckCircle } from 'lucide-react-native';
 import { studentService, adminService } from '../../src/services/api';
 
 interface AlertsScreenProps {
@@ -21,11 +21,11 @@ export function AlertsScreen({ onBack, userType }: AlertsScreenProps) {
     try {
       setLoading(true);
       if (userType === 'admin') {
-        const data = await adminService.getAllAlerts(1, 50);
-        setAlerts(data);
+        const data = await adminService.getAlerts({ page: 1, limit: 50 });
+        setAlerts(data.alerts || []);
       } else {
-        const data = await studentService.getAlerts(1, 50);
-        setAlerts(data);
+        const data = await studentService.getAlerts({ page: 1, limit: 50 });
+        setAlerts(data.alerts || []);
       }
     } catch (error) {
       console.error('Failed to load alerts:', error);
@@ -38,6 +38,27 @@ export function AlertsScreen({ onBack, userType }: AlertsScreenProps) {
   const onRefresh = () => {
     setRefreshing(true);
     loadAlerts();
+  };
+
+  const handleResolveAlert = (alertId: string) => {
+    Alert.alert(
+      'Resolve Alert',
+      'Are you sure you want to mark this alert as resolved?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Resolve',
+          onPress: async () => {
+            try {
+              await adminService.resolveAlert(alertId);
+              await loadAlerts();
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to resolve alert');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const getSeverityColor = (severity: string) => {
@@ -54,7 +75,9 @@ export function AlertsScreen({ onBack, userType }: AlertsScreenProps) {
   };
 
   const formatTime = (dateString: string) => {
+    if (!dateString) return 'Unknown';
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid date';
     const diff = Math.round((Date.now() - date.getTime()) / 1000);
     if (diff < 60) return `${diff}s ago`;
     if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
@@ -118,14 +141,32 @@ export function AlertsScreen({ onBack, userType }: AlertsScreenProps) {
                 <View style={styles.alertHeader}>
                   <AlertTriangle size={20} color={colors.text} />
                   <Text style={[styles.alertTime, { color: colors.text }]}>
-                    {formatTime(alert.createdAt)}
+                    {formatTime(alert.timestamp)}
                   </Text>
                 </View>
 
                 {userType === 'admin' && alert.student && (
-                  <Text style={styles.studentName}>
-                    {alert.student.firstName} {alert.student.lastName}
-                  </Text>
+                  <>
+                    <Text style={styles.studentName}>
+                      {alert.student.firstName} {alert.student.lastName}
+                    </Text>
+                    
+                    {/* Contact Information */}
+                    <View style={styles.contactInfo}>
+                      {alert.student.user?.contactNumber && (
+                        <Text style={styles.contactText}>
+                          Student: {alert.student.user.contactNumber}
+                        </Text>
+                      )}
+                      {alert.student.emergencyContacts && 
+                       alert.student.emergencyContacts.length > 0 && 
+                       alert.student.emergencyContacts[0].phoneNumber && (
+                        <Text style={styles.contactText}>
+                          Guardian: {alert.student.emergencyContacts[0].phoneNumber}
+                        </Text>
+                      )}
+                    </View>
+                  </>
                 )}
                 
                 <Text style={styles.vitalSign}>{alert.type}</Text>
@@ -135,9 +176,26 @@ export function AlertsScreen({ onBack, userType }: AlertsScreenProps) {
                   <View style={[styles.severityBadge, { backgroundColor: colors.text }]}>
                     <Text style={styles.severityText}>{alert.severity} PRIORITY</Text>
                   </View>
-                  <Text style={styles.resolvedText}>
-                    {alert.resolved ? 'Resolved' : 'Active'}
-                  </Text>
+                  {userType === 'admin' ? (
+                    alert.status === 'RESOLVED' ? (
+                      <View style={styles.resolvedBadge}>
+                        <CheckCircle size={14} color="#16a34a" />
+                        <Text style={styles.resolvedBadgeText}>Resolved</Text>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.resolveButton}
+                        onPress={() => handleResolveAlert(alert.id)}
+                      >
+                        <CheckCircle size={14} color="#0d9488" />
+                        <Text style={styles.resolveButtonText}>Resolve</Text>
+                      </TouchableOpacity>
+                    )
+                  ) : (
+                    <Text style={styles.statusText}>
+                      {alert.status === 'RESOLVED' ? 'Resolved' : 'Active'}
+                    </Text>
+                  )}
                 </View>
               </View>
             );
@@ -228,7 +286,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#111827',
-    marginBottom: 4,
+    marginBottom: 6,
+  },
+  contactInfo: {
+    marginBottom: 8,
+  },
+  contactText: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 2,
   },
   vitalSign: {
     fontSize: 14,
@@ -262,6 +328,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     color: '#6b7280',
+  },
+  resolveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#ccfbf1',
+    borderRadius: 12,
+  },
+  resolveButtonText: {
+    color: '#0d9488',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  resolvedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#dcfce7',
+    borderRadius: 12,
+  },
+  resolvedBadgeText: {
+    color: '#16a34a',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  statusText: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontWeight: '500',
   },
   emptyState: {
     alignItems: 'center',
