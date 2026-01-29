@@ -690,7 +690,7 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    devicesData = data.data;
+                    devicesData = data.data.devices || data.data;
                     renderDevicesTable();
                     document.getElementById('devicesLoading').style.display = 'none';
                     document.getElementById('devicesTable').style.display = 'block';
