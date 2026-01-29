@@ -4,11 +4,12 @@ import { ChevronRight, LogOut, User, Bell, Shield, Info } from 'lucide-react-nat
 
 interface SettingsScreenProps {
   onLogout: () => void;
+  onEditProfile?: () => void;
 }
 
-export function SettingsScreen({ onLogout }: SettingsScreenProps) {
+export function SettingsScreen({ onLogout, onEditProfile }: SettingsScreenProps) {
   const settingsItems = [
-    { icon: User, label: 'Profile Settings', description: 'Manage your account' },
+    { icon: User, label: 'Profile Settings', description: 'Manage your account', action: onEditProfile },
     { icon: Bell, label: 'Notifications', description: 'Alert preferences' },
     { icon: Shield, label: 'Privacy', description: 'Data and security' },
     { icon: Info, label: 'About', description: 'App information' },
@@ -31,6 +32,8 @@ export function SettingsScreen({ onLogout }: SettingsScreenProps) {
                 key={index}
                 style={styles.settingItem}
                 activeOpacity={0.7}
+                onPress={item.action}
+                disabled={!item.action}
               >
                 <View style={styles.iconContainer}>
                   <Icon size={22} color="#14b8a6" />

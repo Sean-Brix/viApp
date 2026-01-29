@@ -9,18 +9,15 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { ChevronLeft, Save, Calendar } from 'lucide-react-native';
-import { adminService } from '../../src/services/api';
+import { ChevronLeft, Save, Calendar, User, Phone, Ruler, Weight } from 'lucide-react-native';
+import { studentService } from '../../src/services/api';
 
-interface EditStudentProps {
-  studentId: string;
+interface EditStudentProfileProps {
   onBack: () => void;
   onSuccess: () => void;
 }
 
-interface StudentData {
-  username: string;
-  email: string;
+interface ProfileData {
   firstName: string;
   lastName: string;
   dateOfBirth: string;
@@ -30,15 +27,10 @@ interface StudentData {
   height?: string;
   weight?: string;
   contactNumber?: string;
-  address?: string;
-  guardianName?: string;
-  guardianContact?: string;
 }
 
-export function EditStudent({ studentId, onBack, onSuccess }: EditStudentProps) {
-  const [formData, setFormData] = useState<StudentData>({
-    username: '',
-    email: '',
+export function EditStudentProfile({ onBack, onSuccess }: EditStudentProfileProps) {
+  const [formData, setFormData] = useState<ProfileData>({
     firstName: '',
     lastName: '',
     dateOfBirth: '',
@@ -48,44 +40,33 @@ export function EditStudent({ studentId, onBack, onSuccess }: EditStudentProps) 
     height: '',
     weight: '',
     contactNumber: '',
-    address: '',
-    guardianName: '',
-    guardianContact: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    loadStudent();
-  }, [studentId]);
+    loadProfile();
+  }, []);
 
-  const loadStudent = async () => {
+  const loadProfile = async () => {
     try {
       setLoading(true);
-      const student = await adminService.getStudentById(studentId);
-      
-      // Get primary emergency contact (guardian)
-      const primaryContact = student.emergencyContacts?.find((c: any) => c.isPrimary);
+      const profile = await studentService.getProfile();
       
       setFormData({
-        username: student.user?.username || '',
-        email: student.user?.email || '',
-        firstName: student.firstName || '',
-        lastName: student.lastName || '',
-        dateOfBirth: student.birthdate ? new Date(student.birthdate).toISOString().split('T')[0] : '',
-        gender: student.gender || 'MALE',
-        gradeLevel: student.gradeLevel || '',
-        section: student.section || '',
-        height: student.height ? student.height.toString() : '',
-        weight: student.weight ? student.weight.toString() : '',
-        contactNumber: student.user?.contactNumber || '',
-        address: '',
-        guardianName: primaryContact?.name || '',
-        guardianContact: primaryContact?.phoneNumber || '',
+        firstName: profile.firstName || '',
+        lastName: profile.lastName || '',
+        dateOfBirth: profile.birthdate ? new Date(profile.birthdate).toISOString().split('T')[0] : '',
+        gender: profile.gender || 'MALE',
+        gradeLevel: profile.gradeLevel || '',
+        section: profile.section || '',
+        height: profile.height ? profile.height.toString() : '',
+        weight: profile.weight ? profile.weight.toString() : '',
+        contactNumber: profile.user?.contactNumber || '',
       });
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to load student data');
+      Alert.alert('Error', error.message || 'Failed to load profile');
       onBack();
     } finally {
       setLoading(false);
@@ -94,12 +75,6 @@ export function EditStudent({ studentId, onBack, onSuccess }: EditStudentProps) 
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Invalid email format';
-    }
 
     if (!formData.firstName.trim()) {
       newErrors.firstName = 'First name is required';
@@ -134,8 +109,7 @@ export function EditStudent({ studentId, onBack, onSuccess }: EditStudentProps) 
     setSaving(true);
 
     try {
-      await adminService.updateStudent(studentId, {
-        email: formData.email.trim().toLowerCase(),
+      await studentService.updateProfile({
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         birthdate: formData.dateOfBirth,
@@ -149,7 +123,7 @@ export function EditStudent({ studentId, onBack, onSuccess }: EditStudentProps) 
 
       Alert.alert(
         'Success',
-        'Student updated successfully',
+        'Profile updated successfully',
         [
           {
             text: 'OK',
@@ -159,13 +133,13 @@ export function EditStudent({ studentId, onBack, onSuccess }: EditStudentProps) 
       );
     } catch (error: any) {
       console.error('Update error:', error);
-      Alert.alert('Error', error.message || 'Failed to update student');
+      Alert.alert('Error', error.message || 'Failed to update profile');
     } finally {
       setSaving(false);
     }
   };
 
-  const updateField = (field: keyof StudentData, value: string) => {
+  const updateField = (field: keyof ProfileData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => {
@@ -180,7 +154,7 @@ export function EditStudent({ studentId, onBack, onSuccess }: EditStudentProps) 
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#14b8a6" />
-        <Text style={styles.loadingText}>Loading student data...</Text>
+        <Text style={styles.loadingText}>Loading your profile...</Text>
       </View>
     );
   }
@@ -192,43 +166,11 @@ export function EditStudent({ studentId, onBack, onSuccess }: EditStudentProps) 
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <ChevronLeft size={24} color="#111827" />
         </TouchableOpacity>
-        <Text style={styles.title}>Edit Student</Text>
+        <Text style={styles.title}>Edit Profile</Text>
         <View style={styles.placeholder} />
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        {/* Account Information (Read-only) */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account Information</Text>
-          <View style={styles.form}>
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Username</Text>
-              <TextInput
-                style={[styles.input, styles.inputDisabled]}
-                value={formData.username}
-                editable={false}
-              />
-              <Text style={styles.hint}>Username cannot be changed</Text>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>
-                Email <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={[styles.input, errors.email && styles.inputError]}
-                value={formData.email}
-                onChangeText={(value) => updateField('email', value)}
-                placeholder="john.doe@example.com"
-                placeholderTextColor="#9ca3af"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-            </View>
-          </View>
-        </View>
-
         {/* Personal Information */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Personal Information</Text>
@@ -369,55 +311,13 @@ export function EditStudent({ studentId, onBack, onSuccess }: EditStudentProps) 
                 keyboardType="phone-pad"
               />
             </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Address</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={formData.address}
-                onChangeText={(value) => updateField('address', value)}
-                placeholder="Enter full address"
-                placeholderTextColor="#9ca3af"
-                multiline
-                numberOfLines={3}
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* Guardian Information */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Guardian Information</Text>
-          <View style={styles.form}>
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Guardian Name</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.guardianName}
-                onChangeText={(value) => updateField('guardianName', value)}
-                placeholder="e.g., Jane Doe"
-                placeholderTextColor="#9ca3af"
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Guardian Contact</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.guardianContact}
-                onChangeText={(value) => updateField('guardianContact', value)}
-                placeholder="e.g., +63 912 345 6789"
-                placeholderTextColor="#9ca3af"
-                keyboardType="phone-pad"
-              />
-            </View>
           </View>
         </View>
 
         {/* Buttons */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={[styles.button, styles.cancelButton]}
+            style={styles.cancelButton}
             onPress={onBack}
             disabled={saving}
           >
@@ -425,15 +325,15 @@ export function EditStudent({ studentId, onBack, onSuccess }: EditStudentProps) 
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.button, styles.saveButton, saving && styles.saveButtonDisabled]}
+            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
             onPress={handleSave}
             disabled={saving}
           >
             {saving ? (
-              <ActivityIndicator color="#ffffff" />
+              <ActivityIndicator size="small" color="#ffffff" />
             ) : (
               <>
-                <Save size={20} color="#ffffff" />
+                <Save size={18} color="#ffffff" />
                 <Text style={styles.saveButtonText}>Save Changes</Text>
               </>
             )}
@@ -457,7 +357,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    fontSize: 14,
+    fontSize: 16,
     color: '#6b7280',
   },
   header: {
@@ -475,8 +375,8 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#111827',
   },
   placeholder: {
@@ -493,17 +393,20 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#111827',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   form: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   formRow: {
     flexDirection: 'row',
@@ -517,31 +420,22 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#374151',
     marginBottom: 8,
   },
   required: {
     color: '#ef4444',
   },
-  hint: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 4,
-  },
   input: {
-    height: 48,
     borderWidth: 1,
     borderColor: '#d1d5db',
     borderRadius: 8,
-    paddingHorizontal: 16,
-    fontSize: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 15,
     color: '#111827',
     backgroundColor: '#ffffff',
-  },
-  inputDisabled: {
-    backgroundColor: '#f3f4f6',
-    color: '#6b7280',
   },
   inputError: {
     borderColor: '#ef4444',
@@ -556,16 +450,11 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   inputWithIconPadding: {
-    paddingLeft: 44,
-  },
-  textArea: {
-    height: 96,
-    paddingTop: 12,
-    textAlignVertical: 'top',
+    paddingLeft: 40,
   },
   errorText: {
-    fontSize: 12,
     color: '#ef4444',
+    fontSize: 12,
     marginTop: 4,
   },
   genderButtons: {
@@ -574,55 +463,57 @@ const styles = StyleSheet.create({
   },
   genderButton: {
     flex: 1,
-    height: 48,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#d1d5db',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: '#ffffff',
+    alignItems: 'center',
   },
   genderButtonActive: {
-    backgroundColor: '#14b8a6',
     borderColor: '#14b8a6',
+    backgroundColor: '#f0fdfa',
   },
   genderButtonText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: '600',
+    color: '#6b7280',
   },
   genderButtonTextActive: {
-    color: '#ffffff',
+    color: '#14b8a6',
   },
   buttonContainer: {
     flexDirection: 'row',
-    marginTop: 8,
     gap: 12,
-  },
-  button: {
-    flex: 1,
-    height: 48,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    marginTop: 24,
   },
   cancelButton: {
-    backgroundColor: '#ffffff',
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#d1d5db',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
   },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: '#6b7280',
   },
   saveButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 10,
     backgroundColor: '#14b8a6',
   },
   saveButtonDisabled: {
-    backgroundColor: '#9ca3af',
+    opacity: 0.5,
   },
   saveButtonText: {
     fontSize: 16,
