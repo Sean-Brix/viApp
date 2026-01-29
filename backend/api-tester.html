@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ViApp API Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .auth-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .auth-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .auth-controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .token-display {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            word-break: break-all;
+            color: #16a34a;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            height: fit-content;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .sidebar h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+
+        .endpoint-category {
+            margin-bottom: 25px;
+        }
+
+        .category-title {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .endpoint-item {
+            padding: 10px 15px;
+            margin-bottom: 5px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+
+        .endpoint-item:hover {
+            background: #f8f9fa;
+            border-left-color: #667eea;
+        }
+
+        .endpoint-item.active {
+            background: #e0e7ff;
+            border-left-color: #667eea;
+        }
+
+        .method-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .method-get { background: #dcfce7; color: #16a34a; }
+        .method-post { background: #dbeafe; color: #2563eb; }
+        .method-put { background: #fef3c7; color: #d97706; }
+        .method-delete { background: #fee2e2; color: #dc2626; }
+
+        .content-area {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .endpoint-details h2 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.8em;
+        }
+
+        .endpoint-path {
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-size: 14px;
+            color: #667eea;
+        }
+
+        .description {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .request-section {
+            margin-top: 30px;
+        }
+
+        .request-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .json-editor {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            resize: vertical;
+        }
+
+        .json-editor:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .query-params {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .param-row {
+            display: grid;
+            grid-template-columns: 150px 1fr;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .send-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .response-section {
+            margin-top: 30px;
+        }
+
+        .response-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .status-badge {
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .status-success { background: #dcfce7; color: #16a34a; }
+        .status-error { background: #fee2e2; color: #dc2626; }
+
+        .response-content {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .example-data {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+
+        .example-data strong {
+            color: #667eea;
+        }
+
+        @media (max-width: 968px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .auth-controls {
+                flex-direction: column;
+            }
+
+            .form-group {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 ViApp API Tester</h1>
+            <p>Test and explore all ViApp backend endpoints</p>
+        </div>
+
+        <div class="auth-section">
+            <h2>🔐 Authentication</h2>
+            <div class="auth-controls">
+                <div class="form-group">
+                    <label>Base URL</label>
+                    <input type="text" id="baseUrl" value="http://localhost:3001/api">
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="loginUsername" placeholder="admin">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" placeholder="password">
+                </div>
+                <button class="btn btn-primary" onclick="login()">Login</button>
+                <button class="btn btn-danger" onclick="logout()">Logout</button>
+            </div>
+            <div id="tokenDisplay"></div>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <h3>📋 Endpoints</h3>
+                
+                <div class="endpoint-category">
+                    <div class="category-title">🔑 Auth</div>
+                    <div class="endpoint-item" onclick="selectEndpoint('auth-register')">
+                        <span class="method-badge method-post">POST</span>Register
+                    </div>
+                    <div class="endpoint-item" onclick="selectEndpoint('auth-login')">
+                        <span class="method-badge method-post">POST</span>Login
+                    </div>
+                    <div class="endpoint-item" onclick="selectEndpoint('auth-refresh')">
+                        <span class="method-badge method-post">POST</span>Refresh Token
+                    </div>
+                    <div class="endpoint-item" onclick="selectEndpoint('auth-logout')">
+                        <span class="method-badge method-post">POST</span>Logout
+                    </div>
+                </div>
+
+                <div class="endpoint-category">
+                    <div class="category-title">👨‍💼 Admin - Students</div>
+                    <div class="endpoint-item" onclick="selectEndpoint('admin-students')">
+                        <span class="method-badge method-get">GET</span>All Students
+                    </div>
+                    <div class="endpoint-item" onclick="selectEndpoint('admin-student-by-id')">
+                        <span class="method-badge method-get">GET</span>Student by ID
+                    </div>
+                    <div class="endpoint-item" onclick="selectEndpoint('admin-create-student')">
+                        <span class="method-badge method-post">POST</span>Create Student
+                    </div>
+                    <div class="endpoint-item" onclick="selectEndpoint('admin-update-student')">
+                        <span class="method-badge method-put">PUT</span>Update Student
+                    </div>
+                    <div class="endpoint-item" onclick="selectEndpoint('admin-deactivate-student')">
+                        <span class="method-badge method-delete">DELETE</span>Deactivate Student
+                    </div>
+                </div>
+
+                <div class="endpoint-category">
+                    <div class="category-title">🚨 Admin - Alerts</div>
+                    <div class="endpoint-item" onclick="selectEndpoint('admin-alerts')">
+                        <span class="method-badge method-get">GET</span>All Alerts
+                    </div>
+                    <div class="endpoint-item" onclick="selectEndpoint('admin-acknowledge-alert')">
+                        <span class="method-badge method-put">PUT</span>Acknowledge Alert
+                    </div>
+                    <div class="endpoint-item" onclick="selectEndpoint('admin-resolve-alert')">
+                        <span class="method-badge method-put">PUT</span>Resolve Alert
+                    </div>
+                </div>
+
+                <div class="endpoint-category">
+                    <div class="category-title">📱 Admin - Devices</div>
+                    <div class="endpoint-item" onclick="selectEndpoint('admin-devices')">
+                        <span class="method-badge method-get">GET</span>All Devices
+                    </div>
+                    <div class="endpoint-item" onclick="selectEndpoint('admin-register-device')">
+                        <span class="method-badge method-post">POST</span>Register Device
+                    </div>
+                    <div class="endpoint-item" onclick="selectEndpoint('admin-assign-device')">
+                        <span class="method-badge method-put">PUT</span>Assign Device
+                    </div>
+                    <div class="endpoint-item" onclick="selectEndpoint('admin-unassign-device')">
+                        <span class="method-badge method-put">PUT</span>Unassign Device
+                    </div>
+                </div>
+
+                <div class="endpoint-category">
+                    <div class="category-title">👨‍🎓 Student</div>
+                    <div class="endpoint-item" onclick="selectEndpoint('student-profile')">
+                        <span class="method-badge method-get">GET</span>Profile
+                    </div>
+                    <div class="endpoint-item" onclick="selectEndpoint('student-update-profile')">
+                        <span class="method-badge method-put">PUT</span>Update Profile
+                    </div>
+                    <div class="endpoint-item" onclick="selectEndpoint('student-latest-vitals')">
+                        <span class="method-badge method-get">GET</span>Latest Vitals
+                    </div>
+                    <div class="endpoint-item" onclick="selectEndpoint('student-vitals-history')">
+                        <span class="method-badge method-get">GET</span>Vitals History
+                    </div>
+                    <div class="endpoint-item" onclick="selectEndpoint('student-alerts')">
+                        <span class="method-badge method-get">GET</span>Alerts
+                    </div>
+                    <div class="endpoint-item" onclick="selectEndpoint('student-acknowledge-alert')">
+                        <span class="method-badge method-put">PUT</span>Acknowledge Alert
+                    </div>
+                    <div class="endpoint-item" onclick="selectEndpoint('student-notifications')">
+                        <span class="method-badge method-put">PUT</span>Notification Settings
+                    </div>
+                </div>
+
+                <div class="endpoint-category">
+                    <div class="category-title">💓 Vitals</div>
+                    <div class="endpoint-item" onclick="selectEndpoint('vitals-esp32-upload')">
+                        <span class="method-badge method-post">POST</span>ESP32 Upload (Public)
+                    </div>
+                    <div class="endpoint-item" onclick="selectEndpoint('vitals-upload')">
+                        <span class="method-badge method-post">POST</span>Upload Vital
+                    </div>
+                    <div class="endpoint-item" onclick="selectEndpoint('vitals-bulk-upload')">
+                        <span class="method-badge method-post">POST</span>Bulk Upload
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-area" id="contentArea">
+                <div style="text-align: center; color: #999; padding: 60px 20px;">
+                    <h2 style="color: #667eea; margin-bottom: 10px;">Welcome to ViApp API Tester</h2>
+                    <p>Select an endpoint from the sidebar to get started</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let accessToken = '';
+        let currentEndpoint = null;
+
+        const endpoints = {
+            'auth-register': {
+                method: 'POST',
+                path: '/auth/register',
+                description: 'Register a new user (Admin or Student)',
+                requiresAuth: false,
+                body: {
+                    username: 'newuser',
+                    email: 'newuser@example.com',
+                    password: 'password123',
+                    role: 'STUDENT',
+                    firstName: 'John',
+                    lastName: 'Doe'
+                }
+            },
+            'auth-login': {
+                method: 'POST',
+                path: '/auth/login',
+                description: 'Login with username and password to get access and refresh tokens',
+                requiresAuth: false,
+                body: {
+                    username: 'admin',
+                    password: 'admin123'
+                }
+            },
+            'auth-refresh': {
+                method: 'POST',
+                path: '/auth/refresh',
+                description: 'Refresh access token using refresh token',
+                requiresAuth: false,
+                body: {
+                    refreshToken: 'your-refresh-token-here'
+                }
+            },
+            'auth-logout': {
+                method: 'POST',
+                path: '/auth/logout',
+                description: 'Logout user and invalidate refresh tokens',
+                requiresAuth: true,
+                body: {}
+            },
+            'admin-students': {
+                method: 'GET',
+                path: '/admin/students',
+                description: 'Get all students with pagination',
+                requiresAuth: true,
+                params: {
+                    page: '1',
+                    limit: '10'
+                }
+            },
+            'admin-student-by-id': {
+                method: 'GET',
+                path: '/admin/student/:id',
+                description: 'Get specific student details by ID',
+                requiresAuth: true,
+                pathParams: {
+                    id: '1'
+                }
+            },
+            'admin-create-student': {
+                method: 'POST',
+                path: '/admin/student/create',
+                description: 'Create a new student account',
+                requiresAuth: true,
+                body: {
+                    email: 'student@example.com',
+                    password: 'student123',
+                    firstName: 'Jane',
+                    lastName: 'Smith',
+                    studentId: 'STU002',
+                    phoneNumber: '+639123456789',
+                    emergencyContact: '+639987654321',
+                    dateOfBirth: '2000-01-15',
+                    gender: 'FEMALE',
+                    bloodType: 'O_POSITIVE'
+                }
+            },
+            'admin-update-student': {
+                method: 'PUT',
+                path: '/admin/student/:id',
+                description: 'Update student details',
+                requiresAuth: true,
+                pathParams: {
+                    id: '1'
+                },
+                body: {
+                    firstName: 'UpdatedName',
+                    phoneNumber: '+639111111111'
+                }
+            },
+            'admin-deactivate-student': {
+                method: 'DELETE',
+                path: '/admin/student/:id',
+                description: 'Deactivate a student account',
+                requiresAuth: true,
+                pathParams: {
+                    id: '1'
+                }
+            },
+            'admin-alerts': {
+                method: 'GET',
+                path: '/admin/alerts',
+                description: 'Get all system alerts with pagination',
+                requiresAuth: true,
+                params: {
+                    page: '1',
+                    limit: '10'
+                }
+            },
+            'admin-acknowledge-alert': {
+                method: 'PUT',
+                path: '/admin/alerts/:alertId/acknowledge',
+                description: 'Acknowledge an alert',
+                requiresAuth: true,
+                pathParams: {
+                    alertId: '1'
+                },
+                body: {}
+            },
+            'admin-resolve-alert': {
+                method: 'PUT',
+                path: '/admin/alerts/:alertId/resolve',
+                description: 'Resolve an alert',
+                requiresAuth: true,
+                pathParams: {
+                    alertId: '1'
+                },
+                body: {}
+            },
+            'admin-devices': {
+                method: 'GET',
+                path: '/admin/devices',
+                description: 'Get all registered devices',
+                requiresAuth: true
+            },
+            'admin-register-device': {
+                method: 'POST',
+                path: '/admin/device/register',
+                description: 'Register a new health monitoring device',
+                requiresAuth: true,
+                body: {
+                    deviceId: 'ESP32-001',
+                    deviceName: 'ViBand #1',
+                    deviceType: 'ESP32',
+                    macAddress: 'AA:BB:CC:DD:EE:FF'
+                }
+            },
+            'admin-assign-device': {
+                method: 'PUT',
+                path: '/admin/device/:deviceId/assign',
+                description: 'Assign device to a student (use student database ID number)',
+                requiresAuth: true,
+                pathParams: {
+                    deviceId: 'ESP32-001'
+                },
+                body: {
+                    studentId: 1
+                }
+            },
+            'admin-unassign-device': {
+                method: 'PUT',
+                path: '/admin/device/:deviceId/unassign',
+                description: 'Unassign device from student',
+                requiresAuth: true,
+                pathParams: {
+                    deviceId: 'ESP32-001'
+                },
+                body: {}
+            },
+            'student-profile': {
+                method: 'GET',
+                path: '/student/profile',
+                description: 'Get current student profile',
+                requiresAuth: true
+            },
+            'student-update-profile': {
+                method: 'PUT',
+                path: '/student/profile',
+                description: 'Update student profile information',
+                requiresAuth: true,
+                body: {
+                    phoneNumber: '+639123456789',
+                    emergencyContact: '+639987654321'
+                }
+            },
+            'student-latest-vitals': {
+                method: 'GET',
+                path: '/student/vitals/latest',
+                description: 'Get latest vital signs reading',
+                requiresAuth: true
+            },
+            'student-vitals-history': {
+                method: 'GET',
+                path: '/student/vitals/history',
+                description: 'Get vitals history within date range',
+                requiresAuth: true,
+                params: {
+                    startDate: '2026-01-01',
+                    endDate: '2026-01-31'
+                }
+            },
+            'student-alerts': {
+                method: 'GET',
+                path: '/student/alerts',
+                description: 'Get student alerts',
+                requiresAuth: true,
+                params: {
+                    page: '1',
+                    limit: '10'
+                }
+            },
+            'student-acknowledge-alert': {
+                method: 'PUT',
+                path: '/student/alerts/:alertId/acknowledge',
+                description: 'Acknowledge an alert',
+                requiresAuth: true,
+                pathParams: {
+                    alertId: '1'
+                },
+                body: {}
+            },
+            'student-notifications': {
+                method: 'PUT',
+                path: '/student/notifications',
+                description: 'Update notification preferences',
+                requiresAuth: true,
+                body: {
+                    emailNotifications: true,
+                    pushNotifications: true
+                }
+            },
+            'vitals-esp32-upload': {
+                method: 'POST',
+                path: '/vitals/esp32/upload',
+                description: '🚀 ESP32 device uploads vital reading directly (NO AUTHENTICATION REQUIRED). Device identifies itself with deviceId.',
+                requiresAuth: false,
+                body: {
+                    deviceId: 'ESP32-001',
+                    heartRate: 75,
+                    temperature: 36.8,
+                    spO2: 98,
+                    bloodPressureSystolic: 120,
+                    bloodPressureDiastolic: 80,
+                    batteryLevel: 85
+                }
+            },
+            'vitals-upload': {
+                method: 'POST',
+                path: '/vitals/upload',
+                description: 'Upload a single vital reading (for ESP32 sensor)',
+                requiresAuth: true,
+                body: {
+                    heartRate: 75,
+                    temperature: 36.8,
+                    spO2: 98,
+                    bloodPressureSystolic: 120,
+                    bloodPressureDiastolic: 80
+                }
+            },
+            'vitals-bulk-upload': {
+                method: 'POST',
+                path: '/vitals/bulk-upload',
+                description: 'Bulk upload multiple vital readings (offline sync)',
+                requiresAuth: true,
+                body: {
+                    readings: [
+                        {
+                            heartRate: 75,
+                            temperature: 36.8,
+                            spO2: 98,
+                            timestamp: new Date().toISOString()
+                        },
+                        {
+                            heartRate: 78,
+                            temperature: 36.9,
+                            spO2: 97,
+                            timestamp: new Date(Date.now() - 60000).toISOString()
+                        }
+                    ]
+                }
+            }
+        };
+
+        async function login() {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            if (!username || !password) {
+                alert('Please enter username and password');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${baseUrl}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+                
+                console.log('Login response:', response.status, data);
+
+                if (response.ok && data.success) {
+                    accessToken = data.data.accessToken;
+                    document.getElementById('tokenDisplay').innerHTML = `
+                        <div class="token-display">
+                            ✅ Logged in successfully!<br>
+                            <strong>Role:</strong> ${data.data.user.role}<br>
+                            <strong>Token:</strong> ${accessToken.substring(0, 50)}...
+                        </div>
+                    `;
+                } else {
+                    const errorMsg = data.error?.message || data.message || JSON.stringify(data);
+                    alert('Login failed: ' + errorMsg);
+                    console.error('Login error details:', data);
+                }
+            } catch (error) {
+                console.error('Login request failed:', error);
+                alert('Login error: ' + error.message);
+            }
+        }
+
+        function logout() {
+            accessToken = '';
+            document.getElementById('tokenDisplay').innerHTML = '';
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
+        }
+
+        function selectEndpoint(endpointId) {
+            // Update active state
+            document.querySelectorAll('.endpoint-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.closest('.endpoint-item').classList.add('active');
+
+            currentEndpoint = endpoints[endpointId];
+            renderEndpoint(endpointId, currentEndpoint);
+        }
+
+        function renderEndpoint(id, endpoint) {
+            const methodClass = `method-${endpoint.method.toLowerCase()}`;
+            let path = endpoint.path;
+            
+            // Handle path params
+            if (endpoint.pathParams) {
+                Object.entries(endpoint.pathParams).forEach(([key, value]) => {
+                    path = path.replace(`:${key}`, `<span style="color: #f59e0b;">${value}</span>`);
+                });
+            }
+
+            let paramsHTML = '';
+            if (endpoint.params) {
+                paramsHTML = `
+                    <div class="request-section">
+                        <h3>Query Parameters</h3>
+                        <div class="query-params">
+                            ${Object.entries(endpoint.params).map(([key, value]) => `
+                                <div class="param-row">
+                                    <input type="text" value="${key}" readonly style="background: #f8f9fa;">
+                                    <input type="text" id="param-${key}" value="${value}" placeholder="Value">
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (endpoint.pathParams) {
+                paramsHTML += `
+                    <div class="request-section">
+                        <h3>Path Parameters</h3>
+                        <div class="query-params">
+                            ${Object.entries(endpoint.pathParams).map(([key, value]) => `
+                                <div class="param-row">
+                                    <input type="text" value="${key}" readonly style="background: #f8f9fa;">
+                                    <input type="text" id="pathParam-${key}" value="${value}" placeholder="Value">
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            let bodyHTML = '';
+            if (endpoint.body && Object.keys(endpoint.body).length > 0) {
+                bodyHTML = `
+                    <div class="request-section">
+                        <h3>Request Body (JSON)</h3>
+                        <textarea class="json-editor" id="requestBody">${JSON.stringify(endpoint.body, null, 2)}</textarea>
+                    </div>
+                `;
+            }
+
+            const authBadge = endpoint.requiresAuth 
+                ? '<span style="background: #fef3c7; color: #d97706; padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;">🔒 Requires Auth</span>'
+                : '<span style="background: #dcfce7; color: #16a34a; padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;">🔓 Public</span>';
+
+            document.getElementById('contentArea').innerHTML = `
+                <div class="endpoint-details">
+                    <h2>
+                        <span class="method-badge ${methodClass}">${endpoint.method}</span>
+                        ${id.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                    </h2>
+                    ${authBadge}
+                    <div class="endpoint-path">${path}</div>
+                    <p class="description">${endpoint.description}</p>
+
+                    ${paramsHTML}
+                    ${bodyHTML}
+
+                    <button class="send-button" onclick="sendRequest('${id}')">
+                        🚀 Send Request
+                    </button>
+
+                    <div class="response-section" id="responseSection" style="display: none;">
+                        <div class="response-header">
+                            <h3>Response</h3>
+                            <div id="statusBadge"></div>
+                        </div>
+                        <div class="response-content" id="responseContent"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function sendRequest(endpointId) {
+            const endpoint = endpoints[endpointId];
+            const baseUrl = document.getElementById('baseUrl').value;
+            
+            if (endpoint.requiresAuth && !accessToken) {
+                alert('Please login first to access this endpoint');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('responseSection').style.display = 'block';
+            document.getElementById('responseContent').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <div>Sending request...</div>
+                </div>
+            `;
+
+            let url = baseUrl + endpoint.path;
+
+            // Handle path params
+            if (endpoint.pathParams) {
+                Object.keys(endpoint.pathParams).forEach(key => {
+                    const value = document.getElementById(`pathParam-${key}`).value;
+                    url = url.replace(`:${key}`, value);
+                });
+            }
+
+            // Handle query params
+            if (endpoint.params) {
+                const params = new URLSearchParams();
+                Object.keys(endpoint.params).forEach(key => {
+                    const value = document.getElementById(`param-${key}`).value;
+                    if (value) params.append(key, value);
+                });
+                if (params.toString()) {
+                    url += '?' + params.toString();
+                }
+            }
+
+            const options = {
+                method: endpoint.method,
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            };
+
+            if (endpoint.requiresAuth) {
+                options.headers['Authorization'] = `Bearer ${accessToken}`;
+            }
+
+            if (endpoint.body && Object.keys(endpoint.body).length > 0) {
+                try {
+                    const bodyText = document.getElementById('requestBody').value;
+                    options.body = bodyText;
+                } catch (error) {
+                    alert('Invalid JSON in request body');
+                    return;
+                }
+            }
+
+            try {
+                const startTime = Date.now();
+                const response = await fetch(url, options);
+                const responseTime = Date.now() - startTime;
+                const data = await response.json();
+
+                const statusClass = response.ok ? 'status-success' : 'status-error';
+                document.getElementById('statusBadge').innerHTML = `
+                    <span class="${statusClass}">
+                        ${response.status} ${response.statusText} (${responseTime}ms)
+                    </span>
+                `;
+
+                document.getElementById('responseContent').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                document.getElementById('statusBadge').innerHTML = `
+                    <span class="status-error">Error</span>
+                `;
+                document.getElementById('responseContent').innerHTML = `<pre style="color: #dc2626;">${error.message}</pre>`;
+            }
+        }
+    </script>
+</body>
+</html>

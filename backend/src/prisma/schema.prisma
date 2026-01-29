@@ -1,0 +1,276 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  STUDENT
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum StudentStatus {
+  STABLE
+  NEEDS_ATTENTION
+  CRITICAL
+}
+
+enum VitalStatus {
+  NORMAL
+  HIGH
+  LOW
+}
+
+enum VitalTrend {
+  UP
+  DOWN
+  STABLE
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum AlertStatus {
+  NEW
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+enum DeviceStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
+
+// Models
+
+model User {
+  id            String    @id @default(uuid())
+  username      String    @unique
+  email         String    @unique
+  passwordHash  String
+  role          UserRole
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  student       Student?
+  admin         Admin?
+  refreshTokens RefreshToken[]
+
+  @@index([username])
+  @@index([email])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+model Student {
+  id              String        @id @default(uuid())
+  userId          String        @unique
+  firstName       String
+  lastName        String
+  birthdate       DateTime
+  gender          Gender
+  gradeLevel      String
+  section         String?
+  photoUrl        String?
+  weight          Float?
+  height          Float?
+  status          StudentStatus @default(STABLE)
+  lastCheckup     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Relations
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device            Device?
+  vitals            Vital[]
+  alerts            Alert[]
+  emergencyContacts EmergencyContact[]
+  medicalHistory    MedicalHistory[]
+  notificationSettings NotificationSettings?
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Admin {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  firstName String
+  lastName  String
+  position  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+model Device {
+  id           String       @id @default(uuid())
+  deviceId     String       @unique // ViBand hardware device ID
+  serialNumber String       @unique
+  model        String       @default("ViBand v1")
+  firmwareVersion String    @default("1.0.0")
+  status       DeviceStatus @default(INACTIVE)
+  batteryLevel Int?         // 0-100
+  lastSyncedAt DateTime?
+  studentId    String?      @unique
+  registeredAt DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  
+  student Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  
+  @@index([deviceId])
+  @@index([studentId])
+}
+
+model Vital {
+  id                      String      @id @default(uuid())
+  studentId               String
+  deviceId                String?
+  timestamp               DateTime    @default(now())
+  
+  // Vital Signs
+  heartRate               Int?
+  heartRateStatus         VitalStatus?
+  heartRateTrend          VitalTrend?
+  
+  spO2                    Int?
+  spO2Status              VitalStatus?
+  spO2Trend               VitalTrend?
+  
+  temperature             Float?
+  temperatureStatus       VitalStatus?
+  temperatureTrend        VitalTrend?
+  
+  respiratoryRate         Int?
+  respiratoryRateStatus   VitalStatus?
+  respiratoryRateTrend    VitalTrend?
+  
+  bloodPressureSystolic   Int?
+  bloodPressureDiastolic  Int?
+  bloodPressureStatus     VitalStatus?
+  bloodPressureTrend      VitalTrend?
+  
+  // Metadata
+  syncedAt                DateTime    @default(now())
+  isManualEntry           Boolean     @default(false)
+  notes                   String?     @db.Text
+  
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  @@index([studentId])
+  @@index([timestamp])
+  @@index([deviceId])
+}
+
+model Alert {
+  id          String        @id @default(uuid())
+  studentId   String
+  vitalType   String        // heartRate, spO2, temperature, etc.
+  message     String        @db.Text
+  severity    AlertSeverity
+  status      AlertStatus   @default(NEW)
+  value       Float         // The actual vital value that triggered alert
+  threshold   Float         // The threshold that was exceeded
+  timestamp   DateTime      @default(now())
+  acknowledgedAt DateTime?
+  acknowledgedBy String?    // Admin user ID
+  resolvedAt     DateTime?
+  notes          String?    @db.Text
+  
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  @@index([studentId])
+  @@index([status])
+  @@index([severity])
+  @@index([timestamp])
+}
+
+model EmergencyContact {
+  id          String   @id @default(uuid())
+  studentId   String
+  name        String
+  relationship String
+  phoneNumber String
+  isPrimary   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  @@index([studentId])
+}
+
+model MedicalHistory {
+  id          String   @id @default(uuid())
+  studentId   String
+  type        String   // CONDITION, INJURY, MEDICATION, ALLERGY
+  description String   @db.Text
+  diagnosedAt DateTime?
+  notes       String?  @db.Text
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  @@index([studentId])
+  @@index([type])
+}
+
+model NotificationSettings {
+  id                    String   @id @default(uuid())
+  studentId             String   @unique
+  enablePushNotifications Boolean @default(true)
+  enableEmailNotifications Boolean @default(true)
+  alertsEnabled         Boolean  @default(true)
+  criticalAlertsOnly    Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  @@index([studentId])
+}
+
+model SyncLog {
+  id          String   @id @default(uuid())
+  deviceId    String
+  recordCount Int
+  status      String   // SUCCESS, FAILED, PARTIAL
+  error       String?  @db.Text
+  timestamp   DateTime @default(now())
+  
+  @@index([deviceId])
+  @@index([timestamp])
+}

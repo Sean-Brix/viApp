@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // API Configuration
 const API_BASE_URL = __DEV__ 
   ? 'http://192.168.100.10:3001/api' // Development - Use your local IP for physical devices
-  : 'https://your-production-api.com/api'; // Production
+  : 'https://viapp-qq6u.onrender.com/api'; // Production
 
 // Storage Keys
 export const STORAGE_KEYS = {
