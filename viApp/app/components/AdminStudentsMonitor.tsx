@@ -43,6 +43,12 @@ export function AdminStudentsMonitor({ onBack, onAssignDevice }: AdminStudentsMo
     
     loadStudents();
     
+    // Set up 5-second polling for silent background updates
+    const pollingInterval = setInterval(() => {
+      console.log('🔄 Polling: Updating vital signs silently...');
+      loadStudents(true); // Silent update - no loading spinner
+    }, 5000); // 5 seconds
+    
     // Subscribe to real-time vital signs updates (no polling needed)
     const unsubscribeVitals = websocketService.onVitalSignsUpdate((data) => {
       console.log('📊 ===== WEBSOCKET UPDATE RECEIVED =====');
@@ -89,9 +95,10 @@ export function AdminStudentsMonitor({ onBack, onAssignDevice }: AdminStudentsMo
 
     console.log('✅ Subscribed to alerts');
 
-    // Cleanup subscriptions on unmount
+    // Cleanup subscriptions and polling on unmount
     return () => {
       console.log('🧹 AdminStudentsMonitor unmounting');
+      clearInterval(pollingInterval);
       unsubscribeVitals();
       unsubscribeAlerts();
     };

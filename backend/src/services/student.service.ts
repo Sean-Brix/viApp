@@ -55,19 +55,26 @@ export class StudentService {
       });
     }
 
+    // Prepare update data with proper date conversion
+    const updateData: any = {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      gender: data.gender,
+      gradeLevel: data.gradeLevel,
+      section: data.section,
+      weight: data.weight,
+      height: data.height,
+      photoUrl: data.photoUrl,
+    };
+
+    // Convert birthdate string to DateTime if provided
+    if (data.birthdate) {
+      updateData.birthdate = new Date(data.birthdate);
+    }
+
     const updated = await prisma.student.update({
       where: { userId },
-      data: {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        birthdate: data.birthdate,
-        gender: data.gender,
-        gradeLevel: data.gradeLevel,
-        section: data.section,
-        weight: data.weight,
-        height: data.height,
-        photoUrl: data.photoUrl,
-      },
+      data: updateData,
     });
 
     const age = calculateAge(updated.birthdate);
@@ -296,5 +303,263 @@ export class StudentService {
     });
 
     return updated;
+  }
+
+  // Medical History Management
+  async getMedicalHistory(userId: string) {
+    const student = await prisma.student.findUnique({
+      where: { userId },
+    });
+
+    if (!student) {
+      throw new AppError('Student not found', 404);
+    }
+
+    const history = await prisma.medicalHistory.findMany({
+      where: {
+        studentId: student.id,
+        isActive: true,
+      },
+      orderBy: { diagnosedAt: 'desc' },
+    });
+
+    return history;
+  }
+
+  async addMedicalHistory(userId: string, data: {
+    type: string;
+    description: string;
+    diagnosedAt?: Date;
+    notes?: string;
+  }) {
+    const student = await prisma.student.findUnique({
+      where: { userId },
+    });
+
+    if (!student) {
+      throw new AppError('Student not found', 404);
+    }
+
+    // Convert date string to DateTime if provided
+    let diagnosedAtDate = data.diagnosedAt;
+    if (diagnosedAtDate && typeof diagnosedAtDate === 'string') {
+      // If it's a date string like "2026-01-29", convert to DateTime
+      diagnosedAtDate = new Date(diagnosedAtDate + 'T00:00:00.000Z') as any;
+    }
+
+    const record = await prisma.medicalHistory.create({
+      data: {
+        studentId: student.id,
+        type: data.type,
+        description: data.description,
+        diagnosedAt: data.diagnosedAt ? new Date(data.diagnosedAt) : null,
+        notes: data.notes,
+      },
+    });
+
+    return record;
+  }
+
+  async updateMedicalHistory(userId: string, historyId: string, data: {
+    type?: string;
+    description?: string;
+    diagnosedAt?: Date;
+    notes?: string;
+  }) {
+    const student = await prisma.student.findUnique({
+      where: { userId },
+    });
+
+    if (!student) {
+      throw new AppError('Student not found', 404);
+    }
+
+    const history = await prisma.medicalHistory.findFirst({
+      where: {
+        id: historyId,
+        studentId: student.id,
+      },
+    });
+
+    if (!history) {
+      throw new AppError('Medical history record not found', 404);
+    }
+
+    // Convert date string to DateTime if provided
+    const updateData: any = { ...data };
+    if (data.diagnosedAt) {
+      updateData.diagnosedAt = new Date(data.diagnosedAt);
+    }
+
+    const updated = await prisma.medicalHistory.update({
+      where: { id: historyId },
+      data: updateData,
+    });
+
+    return updated;
+  }
+
+  async deleteMedicalHistory(userId: string, historyId: string) {
+    const student = await prisma.student.findUnique({
+      where: { userId },
+    });
+
+    if (!student) {
+      throw new AppError('Student not found', 404);
+    }
+
+    const history = await prisma.medicalHistory.findFirst({
+      where: {
+        id: historyId,
+        studentId: student.id,
+      },
+    });
+
+    if (!history) {
+      throw new AppError('Medical history record not found', 404);
+    }
+
+    // Soft delete
+    await prisma.medicalHistory.update({
+      where: { id: historyId },
+      data: { isActive: false },
+    });
+
+    return { message: 'Medical history deleted successfully' };
+  }
+
+  // Emergency Contact Management
+  async getEmergencyContacts(userId: string) {
+    const student = await prisma.student.findUnique({
+      where: { userId },
+    });
+
+    if (!student) {
+      throw new AppError('Student not found', 404);
+    }
+
+    const contacts = await prisma.emergencyContact.findMany({
+      where: { studentId: student.id },
+      orderBy: [
+        { isPrimary: 'desc' },
+        { createdAt: 'desc' },
+      ],
+    });
+
+    return contacts;
+  }
+
+  async addEmergencyContact(userId: string, data: {
+    name: string;
+    relationship: string;
+    phoneNumber: string;
+    isPrimary?: boolean;
+  }) {
+    const student = await prisma.student.findUnique({
+      where: { userId },
+    });
+
+    if (!student) {
+      throw new AppError('Student not found', 404);
+    }
+
+    // If setting as primary, unset any existing primary contacts
+    if (data.isPrimary) {
+      await prisma.emergencyContact.updateMany({
+        where: {
+          studentId: student.id,
+          isPrimary: true,
+        },
+        data: {
+          isPrimary: false,
+        },
+      });
+    }
+
+    const contact = await prisma.emergencyContact.create({
+      data: {
+        studentId: student.id,
+        name: data.name,
+        relationship: data.relationship,
+        phoneNumber: data.phoneNumber,
+        isPrimary: data.isPrimary || false,
+      },
+    });
+
+    return contact;
+  }
+
+  async updateEmergencyContact(userId: string, contactId: string, data: {
+    name?: string;
+    relationship?: string;
+    phoneNumber?: string;
+    isPrimary?: boolean;
+  }) {
+    const student = await prisma.student.findUnique({
+      where: { userId },
+    });
+
+    if (!student) {
+      throw new AppError('Student not found', 404);
+    }
+
+    const contact = await prisma.emergencyContact.findFirst({
+      where: {
+        id: contactId,
+        studentId: student.id,
+      },
+    });
+
+    if (!contact) {
+      throw new AppError('Emergency contact not found', 404);
+    }
+
+    // If setting as primary, unset any existing primary contacts
+    if (data.isPrimary) {
+      await prisma.emergencyContact.updateMany({
+        where: {
+          studentId: student.id,
+          isPrimary: true,
+          NOT: { id: contactId },
+        },
+        data: {
+          isPrimary: false,
+        },
+      });
+    }
+
+    const updated = await prisma.emergencyContact.update({
+      where: { id: contactId },
+      data,
+    });
+
+    return updated;
+  }
+
+  async deleteEmergencyContact(userId: string, contactId: string) {
+    const student = await prisma.student.findUnique({
+      where: { userId },
+    });
+
+    if (!student) {
+      throw new AppError('Student not found', 404);
+    }
+
+    const contact = await prisma.emergencyContact.findFirst({
+      where: {
+        id: contactId,
+        studentId: student.id,
+      },
+    });
+
+    if (!contact) {
+      throw new AppError('Emergency contact not found', 404);
+    }
+
+    await prisma.emergencyContact.delete({
+      where: { id: contactId },
+    });
+
+    return { message: 'Emergency contact deleted successfully' };
   }
 }

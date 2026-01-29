@@ -126,3 +126,113 @@ export const updateNotificationSettings = async (req: AuthRequest, res: Response
     next(error);
   }
 };
+
+// Medical History Controllers
+export const getMedicalHistory = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      return sendError(res, 'Unauthorized', 401);
+    }
+
+    const history = await studentService.getMedicalHistory(req.user.userId);
+    sendSuccess(res, history);
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+export const addMedicalHistory = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      return sendError(res, 'Unauthorized', 401);
+    }
+
+    const record = await studentService.addMedicalHistory(req.user.userId, req.body);
+    sendSuccess(res, record, 'Medical history added successfully');
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+export const updateMedicalHistory = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      return sendError(res, 'Unauthorized', 401);
+    }
+
+    const { historyId } = req.params;
+    const record = await studentService.updateMedicalHistory(req.user.userId, historyId as string, req.body);
+    sendSuccess(res, record, 'Medical history updated successfully');
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+export const deleteMedicalHistory = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      return sendError(res, 'Unauthorized', 401);
+    }
+
+    const { historyId } = req.params;
+    const result = await studentService.deleteMedicalHistory(req.user.userId, historyId as string);
+    sendSuccess(res, result, result.message);
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+// Emergency Contact Controllers
+export const getEmergencyContacts = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      return sendError(res, 'Unauthorized', 401);
+    }
+
+    const contacts = await studentService.getEmergencyContacts(req.user.userId);
+    sendSuccess(res, contacts);
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+export const addEmergencyContact = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      return sendError(res, 'Unauthorized', 401);
+    }
+
+    const contact = await studentService.addEmergencyContact(req.user.userId, req.body);
+    sendSuccess(res, contact, 'Emergency contact added successfully');
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+export const updateEmergencyContact = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      return sendError(res, 'Unauthorized', 401);
+    }
+
+    const { contactId } = req.params;
+    const contact = await studentService.updateEmergencyContact(req.user.userId, contactId as string, req.body);
+    sendSuccess(res, contact, 'Emergency contact updated successfully');
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+export const deleteEmergencyContact = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      return sendError(res, 'Unauthorized', 401);
+    }
+
+    const { contactId } = req.params;
+    const result = await studentService.deleteEmergencyContact(req.user.userId, contactId as string);
+    sendSuccess(res, result, result.message);
+  } catch (error: any) {
+    next(error);
+  }
+};

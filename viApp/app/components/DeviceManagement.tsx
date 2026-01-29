@@ -149,7 +149,7 @@ export function DeviceManagement({ onBack, onRegisterDevice }: DeviceManagementP
           style: 'destructive',
           onPress: async () => {
             try {
-              await adminService.unassignDevice(device.id);
+              await adminService.unassignDevice(device.deviceId); // Use deviceId instead of id
               Alert.alert('Success', 'Device unassigned successfully');
               await loadData();
             } catch (error: any) {

@@ -23,17 +23,32 @@ export function StudentVitalsStatistics({ onBack }: StudentVitalsStatisticsProps
 
   useEffect(() => {
     loadStatistics();
+
+    // Set up 5-second polling for silent updates
+    const pollingInterval = setInterval(() => {
+      loadStatistics(true); // Pass true for silent update
+    }, 5000);
+
+    // Cleanup polling on unmount
+    return () => {
+      clearInterval(pollingInterval);
+    };
   }, []);
 
-  const loadStatistics = async () => {
+  const loadStatistics = async (silent = false) => {
     try {
-      setLoading(true);
+      // Only show loading spinner on initial load, not during silent polling
+      if (!silent) {
+        setLoading(true);
+      }
       const data = await studentService.getVitalsStatistics();
       setStatistics(data);
     } catch (error) {
       console.error('Failed to load statistics:', error);
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
       setRefreshing(false);
     }
   };

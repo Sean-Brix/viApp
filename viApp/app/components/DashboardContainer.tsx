@@ -43,6 +43,12 @@ export function DashboardContainer({ onStudentClick, onAddStudent }: DashboardCo
   useEffect(() => {
     fetchStudents();
     
+    // Set up 5-second polling for silent background updates
+    const pollingInterval = setInterval(() => {
+      console.log('🔄 Polling: Updating dashboard silently...');
+      fetchStudents(true); // Silent update - no loading spinner
+    }, 5000); // 5 seconds
+    
     // Subscribe to real-time vital signs updates
     const unsubscribeVitals = websocketService.onVitalSignsUpdate((data) => {
       console.log('📊 Real-time vital signs update in dashboard container:', data);
@@ -69,6 +75,7 @@ export function DashboardContainer({ onStudentClick, onAddStudent }: DashboardCo
     });
 
     return () => {
+      clearInterval(pollingInterval);
       unsubscribeVitals();
       unsubscribeAlerts();
     };

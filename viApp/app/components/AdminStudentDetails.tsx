@@ -61,6 +61,12 @@ export function AdminStudentDetails({ studentId, onBack }: AdminStudentDetailsPr
     loadStudentDetails();
     loadMedicalHistory();
 
+    // Set up 5-second polling for silent background updates
+    const pollingInterval = setInterval(() => {
+      console.log('🔄 Polling: Updating student details silently...');
+      loadStudentDetails(true); // Silent update - no loading spinner
+    }, 5000); // 5 seconds
+
     // Subscribe to real-time vital signs updates
     const unsubscribeVitals = websocketService.onVitalSignsUpdate((data) => {
       // Only update if this is for the current student
@@ -89,23 +95,26 @@ export function AdminStudentDetails({ studentId, onBack }: AdminStudentDetailsPr
       }
     });
 
-    // Cleanup subscriptions on unmount
+    // Cleanup subscriptions and polling on unmount
     return () => {
+      clearInterval(pollingInterval);
       unsubscribeVitals();
       unsubscribeAlerts();
     };
   }, [studentId]);
 
-  const loadStudentDetails = async () => {
+  const loadStudentDetails = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const data = await adminService.getStudentById(studentId, true);
       setStudent(data);
     } catch (error: any) {
       console.error('Failed to load student details:', error);
-      Alert.alert('Error', error.message || 'Failed to load student details');
+      if (!silent) {
+        Alert.alert('Error', error.message || 'Failed to load student details');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
       setRefreshing(false);
     }
   };

@@ -15,9 +15,9 @@ export function AlertsContainer({ onBack }: AlertsContainerProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAlerts = useCallback(async () => {
+  const fetchAlerts = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError(null);
 
       const response = await adminService.getAlerts({
@@ -32,12 +32,18 @@ export function AlertsContainer({ onBack }: AlertsContainerProps) {
       console.error('Failed to fetch alerts:', err);
       setError(err.message || 'Failed to load alerts');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     fetchAlerts();
+    
+    // Set up 5-second polling for silent background updates
+    const pollingInterval = setInterval(() => {
+      console.log('🔄 Polling: Updating alerts silently...');
+      fetchAlerts(true); // Silent update - no loading spinner
+    }, 5000); // 5 seconds
     
     // Subscribe to real-time alerts
     const unsubscribeAlerts = websocketService.onAlert((data) => {
@@ -47,11 +53,12 @@ export function AlertsContainer({ onBack }: AlertsContainerProps) {
         setAlerts(prevAlerts => [data.alert, ...prevAlerts]);
       } else {
         // Reload all alerts if we don't have the full alert object
-        fetchAlerts();
+        fetchAlerts(true);
       }
     });
     
     return () => {
+      clearInterval(pollingInterval);
       unsubscribeAlerts();
     };
   }, [fetchAlerts]);

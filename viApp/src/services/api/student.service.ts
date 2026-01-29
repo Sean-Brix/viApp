@@ -244,6 +244,140 @@ class StudentService {
       throw new Error(error.response?.data?.message || 'Failed to update notification settings');
     }
   }
+
+  /**
+   * Get student medical history
+   */
+  async getMedicalHistory(): Promise<MedicalHistoryRecord[]> {
+    try {
+      const response = await apiClient.get('/student/medical-history');
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch medical history');
+    }
+  }
+
+  /**
+   * Add medical history record
+   */
+  async addMedicalHistory(data: {
+    type: string;
+    description: string;
+    diagnosedAt?: string;
+    notes?: string;
+  }): Promise<MedicalHistoryRecord> {
+    try {
+      const response = await apiClient.post('/student/medical-history', data);
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to add medical history');
+    }
+  }
+
+  /**
+   * Update medical history record
+   */
+  async updateMedicalHistory(historyId: string, data: {
+    type?: string;
+    description?: string;
+    diagnosedAt?: string;
+    notes?: string;
+  }): Promise<MedicalHistoryRecord> {
+    try {
+      const response = await apiClient.put(`/student/medical-history/${historyId}`, data);
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to update medical history');
+    }
+  }
+
+  /**
+   * Delete medical history record
+   */
+  async deleteMedicalHistory(historyId: string): Promise<void> {
+    try {
+      await apiClient.delete(`/student/medical-history/${historyId}`);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to delete medical history');
+    }
+  }
+
+  /**
+   * Get emergency contacts
+   */
+  async getEmergencyContacts(): Promise<EmergencyContact[]> {
+    try {
+      const response = await apiClient.get('/student/emergency-contacts');
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch emergency contacts');
+    }
+  }
+
+  /**
+   * Add emergency contact
+   */
+  async addEmergencyContact(data: {
+    name: string;
+    relationship: string;
+    phoneNumber: string;
+    isPrimary?: boolean;
+  }): Promise<EmergencyContact> {
+    try {
+      const response = await apiClient.post('/student/emergency-contacts', data);
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to add emergency contact');
+    }
+  }
+
+  /**
+   * Update emergency contact
+   */
+  async updateEmergencyContact(contactId: string, data: {
+    name?: string;
+    relationship?: string;
+    phoneNumber?: string;
+    isPrimary?: boolean;
+  }): Promise<EmergencyContact> {
+    try {
+      const response = await apiClient.put(`/student/emergency-contacts/${contactId}`, data);
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to update emergency contact');
+    }
+  }
+
+  /**
+   * Delete emergency contact
+   */
+  async deleteEmergencyContact(contactId: string): Promise<void> {
+    try {
+      await apiClient.delete(`/student/emergency-contacts/${contactId}`);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to delete emergency contact');
+    }
+  }
+}
+
+export interface MedicalHistoryRecord {
+  id: string;
+  type: string;
+  description: string;
+  diagnosedAt?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmergencyContact {
+  id: string;
+  name: string;
+  relationship: string;
+  phoneNumber: string;
+  isPrimary: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default new StudentService();

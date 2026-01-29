@@ -64,4 +64,60 @@ router.put('/alerts/:alertId/acknowledge', studentController.acknowledgeAlert);
  */
 router.put('/notifications', studentController.updateNotificationSettings);
 
+/**
+ * @route   GET /api/student/medical-history
+ * @desc    Get student medical history
+ * @access  Private (Student)
+ */
+router.get('/medical-history', studentController.getMedicalHistory);
+
+/**
+ * @route   POST /api/student/medical-history
+ * @desc    Add medical history record
+ * @access  Private (Student)
+ */
+router.post('/medical-history', studentController.addMedicalHistory);
+
+/**
+ * @route   PUT /api/student/medical-history/:historyId
+ * @desc    Update medical history record
+ * @access  Private (Student)
+ */
+router.put('/medical-history/:historyId', studentController.updateMedicalHistory);
+
+/**
+ * @route   DELETE /api/student/medical-history/:historyId
+ * @desc    Delete medical history record
+ * @access  Private (Student)
+ */
+router.delete('/medical-history/:historyId', studentController.deleteMedicalHistory);
+
+/**
+ * @route   GET /api/student/emergency-contacts
+ * @desc    Get student emergency contacts
+ * @access  Private (Student)
+ */
+router.get('/emergency-contacts', studentController.getEmergencyContacts);
+
+/**
+ * @route   POST /api/student/emergency-contacts
+ * @desc    Add emergency contact
+ * @access  Private (Student)
+ */
+router.post('/emergency-contacts', studentController.addEmergencyContact);
+
+/**
+ * @route   PUT /api/student/emergency-contacts/:contactId
+ * @desc    Update emergency contact
+ * @access  Private (Student)
+ */
+router.put('/emergency-contacts/:contactId', studentController.updateEmergencyContact);
+
+/**
+ * @route   DELETE /api/student/emergency-contacts/:contactId
+ * @desc    Delete emergency contact
+ * @access  Private (Student)
+ */
+router.delete('/emergency-contacts/:contactId', studentController.deleteEmergencyContact);
+
 export default router;

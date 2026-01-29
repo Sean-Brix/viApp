@@ -34,16 +34,25 @@ export function StudentDashboard({ onNavigate }: StudentDashboardProps) {
       setAlerts(prevAlerts => [data.alert, ...prevAlerts.slice(0, 4)]); // Keep only 5 alerts
     });
 
-    // Cleanup subscriptions on unmount
+    // Set up 5-second polling for silent updates
+    const pollingInterval = setInterval(() => {
+      loadDashboardData(true); // Pass true for silent update
+    }, 5000);
+
+    // Cleanup subscriptions and polling on unmount
     return () => {
       unsubscribeVitals();
       unsubscribeAlerts();
+      clearInterval(pollingInterval);
     };
   }, []);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = async (silent = false) => {
     try {
-      setLoading(true);
+      // Only show loading spinner on initial load, not during silent polling
+      if (!silent) {
+        setLoading(true);
+      }
       
       // Load profile
       try {
@@ -74,7 +83,9 @@ export function StudentDashboard({ onNavigate }: StudentDashboardProps) {
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
       setRefreshing(false);
     }
   };
@@ -87,7 +98,9 @@ export function StudentDashboard({ onNavigate }: StudentDashboardProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'NORMAL': return '#16a34a';
+      case 'STABLE': return '#16a34a';
       case 'WARNING': return '#f59e0b';
+      case 'NEEDS_ATTENTION': return '#f59e0b';
       case 'CRITICAL': return '#dc2626';
       default: return '#6b7280';
     }
@@ -96,7 +109,9 @@ export function StudentDashboard({ onNavigate }: StudentDashboardProps) {
   const getStatusBgColor = (status: string) => {
     switch (status) {
       case 'NORMAL': return '#dcfce7';
+      case 'STABLE': return '#dcfce7';
       case 'WARNING': return '#fef3c7';
+      case 'NEEDS_ATTENTION': return '#fef3c7';
       case 'CRITICAL': return '#fee2e2';
       default: return '#f3f4f6';
     }
@@ -137,6 +152,38 @@ export function StudentDashboard({ onNavigate }: StudentDashboardProps) {
     }
   };
 
+  const getOverallHealthStatus = () => {
+    // Check latest vitals for critical/warning status
+    if (!latestVitals) {
+      return 'STABLE';
+    }
+
+    // Check if any vital sign is in critical status
+    const hasCritical = 
+      latestVitals.heartRateStatus === 'CRITICAL' ||
+      latestVitals.temperatureStatus === 'CRITICAL' ||
+      latestVitals.spO2Status === 'CRITICAL' ||
+      latestVitals.bloodPressureStatus === 'CRITICAL';
+
+    if (hasCritical) {
+      return 'CRITICAL';
+    }
+
+    // Check if any vital sign is in warning status
+    const hasWarning = 
+      latestVitals.heartRateStatus === 'WARNING' ||
+      latestVitals.temperatureStatus === 'WARNING' ||
+      latestVitals.spO2Status === 'WARNING' ||
+      latestVitals.bloodPressureStatus === 'WARNING';
+
+    if (hasWarning) {
+      return 'NEEDS_ATTENTION';
+    }
+
+    // All vitals are normal
+    return 'NORMAL';
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -165,16 +212,16 @@ export function StudentDashboard({ onNavigate }: StudentDashboardProps) {
       <View style={styles.statusCard}>
         <View style={styles.statusHeader}>
           <View style={[styles.statusIcon, { 
-            backgroundColor: getStatusBgColor(profile?.status || 'STABLE') 
+            backgroundColor: getStatusBgColor(getOverallHealthStatus()) 
           }]}>
-            <Activity size={32} color={getStatusColor(profile?.status || 'STABLE')} />
+            <Activity size={32} color={getStatusColor(getOverallHealthStatus())} />
           </View>
           <View style={styles.statusInfo}>
             <Text style={styles.statusLabel}>Overall Health Status</Text>
             <Text style={[styles.statusValue, { 
-              color: getStatusColor(profile?.status || 'STABLE') 
+              color: getStatusColor(getOverallHealthStatus()) 
             }]}>
-              {profile?.status || 'STABLE'}
+              {getOverallHealthStatus()}
             </Text>
           </View>
         </View>
@@ -388,6 +435,24 @@ export function StudentDashboard({ onNavigate }: StudentDashboardProps) {
             <Text style={styles.profileValue}>{profile?.bmi?.toFixed(1)}</Text>
           </View>
         </View>
+      </View>
+
+      {/* Medical History Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Medical History</Text>
+          <TouchableOpacity onPress={() => onNavigate('medicalHistory')}>
+            <Text style={styles.viewAllText}>View All</Text>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity 
+          style={styles.medicalHistoryButton}
+          onPress={() => onNavigate('medicalHistory')}
+        >
+          <Text style={styles.medicalHistoryText}>
+            View and manage your medical records
+          </Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -652,5 +717,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9ca3af',
     textAlign: 'center',
+  },
+  medicalHistoryButton: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  medicalHistoryText: {
+    fontSize: 14,
+    color: '#0d9488',
+    fontWeight: '600',
   },
 });

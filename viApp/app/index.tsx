@@ -6,7 +6,8 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { StudentDashboard } from './components/StudentDashboard';
 import { StudentVitalsStatistics } from './components/StudentVitalsStatistics';
 import { StudentProfile } from './components/StudentProfile';
-import { EditStudentProfile } from './components/EditStudentProfile';
+import { StudentMedicalHistory } from './components/StudentMedicalHistory';
+import { ProfileSettings } from './components/ProfileSettings';
 import { AdminStudentsList } from './components/AdminStudentsList';
 import { AlertsScreen } from './components/AlertsScreen';
 import { SettingsScreen } from './components/SettingsScreen';
@@ -81,7 +82,8 @@ export default function Index() {
       setActiveScreen('editStudent' as any);
     } else if (screen === 'vitalsHistory' || screen === 'profile' || screen === 'studentsList' || 
         screen === 'connectDevice' || screen === 'createStudent' || screen === 'registerDevice' || 
-        screen === 'deviceManagement' || screen === 'monitorStudents' || screen === 'editStudent' || screen === 'editProfile') {
+        screen === 'deviceManagement' || screen === 'monitorStudents' || screen === 'editStudent' || 
+        screen === 'editProfile' || screen === 'medicalHistory') {
       setActiveScreen(screen as any);
     } else {
       setActiveScreen(screen as Screen);
@@ -202,6 +204,12 @@ export default function Index() {
             <StudentVitalsStatistics onBack={() => setActiveScreen('home')} />
           );
         
+        case 'history':
+        case 'medicalHistory' as any:
+          return (
+            <StudentMedicalHistory onBack={() => setActiveScreen('home')} />
+          );
+        
         case 'profile':
           return (
             <StudentProfile onBack={() => setActiveScreen('home')} />
@@ -209,7 +217,7 @@ export default function Index() {
         
         case 'editProfile' as any:
           return (
-            <EditStudentProfile
+            <ProfileSettings
               onBack={() => setActiveScreen('settings')}
               onSuccess={() => setActiveScreen('settings')}
             />
