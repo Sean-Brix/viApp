@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "94944d87-c414-4cdf-8680-e3f7f63b33cf"
+      }
+    },
+    "android": {
+      "package": "com.seanbrix.viapp"
+    }
+  }
+}
