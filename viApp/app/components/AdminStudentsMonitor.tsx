@@ -346,16 +346,6 @@ export function AdminStudentsMonitor({ onBack, onAssignDevice }: AdminStudentsMo
                         '%',
                         [95, 100]
                       )}
-                      {latestVital.bloodPressureSystolic !== undefined && (
-                        <View style={styles.vitalBox}>
-                          <ActivityIcon size={20} color="#8b5cf6" />
-                          <Text style={styles.vitalLabel}>BP</Text>
-                          <Text style={styles.vitalValue}>
-                            {latestVital.bloodPressureSystolic}/{latestVital.bloodPressureDiastolic}
-                          </Text>
-                          <Text style={styles.vitalUnit}>mmHg</Text>
-                        </View>
-                      )}
                     </View>
                     <Text style={styles.lastUpdate}>
                       Last update: {formatTimestamp(latestVital.timestamp)}

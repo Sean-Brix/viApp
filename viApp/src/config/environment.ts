@@ -1,18 +1,14 @@
 /**
  * Environment Configuration
  * 
- * To switch between development and production:
- * 1. Set USE_PRODUCTION to true for production backend
- * 2. Set USE_PRODUCTION to false for local development
- * 3. Update DEVELOPMENT_API_URL to your local IP if needed
+ * Automatically detects environment:
+ * - Production APK: Uses production backend
+ * - Development/Expo: Uses local backend
  */
 
 export const ENV_CONFIG = {
-  // Toggle this to switch between dev and prod
-  USE_PRODUCTION: false, // Set to true to use production backend
-  
   // API URLs
-  DEVELOPMENT_API_URL: 'http://192.168.100.10:3001/api', // Update this to your local IP
+  DEVELOPMENT_API_URL: 'http://192.168.100.10:3001/api',
   PRODUCTION_API_URL: 'https://viapp-qq6u.onrender.com/api',
   
   // Other configs
@@ -20,9 +16,13 @@ export const ENV_CONFIG = {
   MAX_RETRY_ATTEMPTS: 3,
 };
 
-// Helper to get current API URL
+// Helper to get current API URL (auto-detects environment)
 export const getApiUrl = (): string => {
-  if (ENV_CONFIG.USE_PRODUCTION) {
+  // In production builds, __DEV__ is false
+  // In development (Expo), __DEV__ is true
+  const isProduction = !__DEV__;
+  
+  if (isProduction) {
     console.log('🌐 Using PRODUCTION backend:', ENV_CONFIG.PRODUCTION_API_URL);
     return ENV_CONFIG.PRODUCTION_API_URL;
   }
@@ -32,5 +32,5 @@ export const getApiUrl = (): string => {
 };
 
 // Export current environment
-export const IS_PRODUCTION = ENV_CONFIG.USE_PRODUCTION;
+export const IS_PRODUCTION = !__DEV__;
 export const API_BASE_URL = getApiUrl();

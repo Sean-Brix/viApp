@@ -177,7 +177,7 @@ export function StudentProfile({ onBack }: StudentProfileProps) {
                 <Text style={styles.infoValue}>{profile.gradeLevel}</Text>
               </View>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Section</Text>
+                <Text style={styles.infoLabel}>Strand</Text>
                 <Text style={styles.infoValue}>{profile.section}</Text>
               </View>
             </View>

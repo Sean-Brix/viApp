@@ -730,37 +730,6 @@ export function AdminStudentDetails({ studentId, onBack }: AdminStudentDetailsPr
                     </View>
                   </View>
                 )}
-
-                {/* Blood Pressure */}
-                {latestVitals.bloodPressureSystolic && (
-                  <View style={styles.vitalCard}>
-                    <View style={[styles.vitalIcon, { backgroundColor: '#e0e7ff' }]}>
-                      <Activity size={24} color="#6366f1" />
-                    </View>
-                    <Text style={styles.vitalLabel}>Blood Pressure</Text>
-                    <View style={styles.vitalValueContainer}>
-                      <Text style={styles.vitalValue}>
-                        {latestVitals.bloodPressureSystolic}/{latestVitals.bloodPressureDiastolic}
-                      </Text>
-                      <Text style={styles.vitalUnit}>mmHg</Text>
-                    </View>
-                    <View
-                      style={[
-                        styles.vitalStatus,
-                        { backgroundColor: getStatusBgColor(latestVitals.bloodPressureStatus) },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.vitalStatusText,
-                          { color: getStatusColor(latestVitals.bloodPressureStatus) },
-                        ]}
-                      >
-                        {latestVitals.bloodPressureStatus}
-                      </Text>
-                    </View>
-                  </View>
-                )}
               </View>
 
               <View style={styles.lastUpdated}>

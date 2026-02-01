@@ -18,6 +18,10 @@ import { DeviceManagement } from './components/DeviceManagement';
 import { AdminStudentsMonitor } from './components/AdminStudentsMonitor';
 import { AdminStudentDetails } from './components/AdminStudentDetails';
 import { SchoolHealthStats } from './components/SchoolHealthStats';
+import { AdminProfileSettings } from './components/AdminProfileSettings';
+import { NotificationPreferences } from './components/NotificationPreferences';
+import { PrivacySettings } from './components/PrivacySettings';
+import { AboutScreen } from './components/AboutScreen';
 import { BottomNav } from './components/BottomNav';
 import { Screen, UserType } from './types';
 import { websocketService } from '../src/services/websocket';
@@ -83,7 +87,8 @@ export default function Index() {
     } else if (screen === 'vitalsHistory' || screen === 'profile' || screen === 'studentsList' || 
         screen === 'connectDevice' || screen === 'createStudent' || screen === 'registerDevice' || 
         screen === 'deviceManagement' || screen === 'monitorStudents' || screen === 'editStudent' || 
-        screen === 'editProfile' || screen === 'medicalHistory') {
+        screen === 'editProfile' || screen === 'medicalHistory' || screen === 'adminProfileSettings' ||
+        screen === 'notificationPreferences' || screen === 'privacySettings' || screen === 'aboutScreen') {
       setActiveScreen(screen as any);
     } else {
       setActiveScreen(screen as Screen);
@@ -185,8 +190,28 @@ export default function Index() {
         case 'history':
           return <SchoolHealthStats onBack={() => setActiveScreen('home')} />;
         
+        case 'adminProfileSettings' as any:
+          return <AdminProfileSettings onBack={() => setActiveScreen('settings')} />;
+        
+        case 'notificationPreferences' as any:
+          return <NotificationPreferences onBack={() => setActiveScreen('settings')} />;
+        
+        case 'privacySettings' as any:
+          return <PrivacySettings onBack={() => setActiveScreen('settings')} />;
+        
+        case 'aboutScreen' as any:
+          return <AboutScreen onBack={() => setActiveScreen('settings')} />;
+        
         case 'settings':
-          return <SettingsScreen onLogout={handleLogout} />;
+          return (
+            <SettingsScreen 
+              onLogout={handleLogout}
+              onEditProfile={() => handleNavigate('adminProfileSettings')}
+              onNotifications={() => handleNavigate('notificationPreferences')}
+              onPrivacy={() => handleNavigate('privacySettings')}
+              onAbout={() => handleNavigate('aboutScreen')}
+            />
+          );
         
         default:
           return <AdminDashboard onNavigate={handleNavigate} />;
@@ -227,7 +252,15 @@ export default function Index() {
           return <AlertsScreen userType="student" />;
         
         case 'settings':
-          return <SettingsScreen onLogout={handleLogout} onEditProfile={() => handleNavigate('editProfile')} />;
+          return (
+            <SettingsScreen 
+              onLogout={handleLogout} 
+              onEditProfile={() => handleNavigate('editProfile')}
+              onNotifications={() => handleNavigate('notificationPreferences')}
+              onPrivacy={() => handleNavigate('privacySettings')}
+              onAbout={() => handleNavigate('aboutScreen')}
+            />
+          );
         
         default:
           return <StudentDashboard onNavigate={handleNavigate} />;

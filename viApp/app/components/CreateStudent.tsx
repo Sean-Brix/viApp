@@ -30,7 +30,7 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
     birthdate: '',
     gender: 'MALE' as 'MALE' | 'FEMALE',
     gradeLevel: '',
-    section: '',
+    strand: '',
     contactNumber: '',
     guardianName: '',
     guardianContact: '',
@@ -40,7 +40,7 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showGradePicker, setShowGradePicker] = useState(false);
-  const [showSectionPicker, setShowSectionPicker] = useState(false);
+  const [showStrandPicker, setShowStrandPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState({ year: '2008', month: '01', day: '01' });
   const [showPassword, setShowPassword] = useState(false);
@@ -55,8 +55,8 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
     'Grade 11', 'Grade 12'
   ];
 
-  // Sections
-  const sections = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+  // Strands
+  const strands = ['ABM', 'GAS', 'HE', 'HUMSS', 'ICT', 'STEM'];
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -174,7 +174,7 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
         birthdate: formData.birthdate,
         gender: formData.gender,
         gradeLevel: formData.gradeLevel.trim(),
-        section: formData.section.trim() || undefined,
+        section: formData.strand.trim() || undefined,
         contactNumber: cleanContactNumber,
         guardianName: formData.guardianName.trim(),
         guardianContact: cleanGuardianContact,
@@ -461,13 +461,13 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
               </View>
 
               <View style={[styles.formGroup, styles.formGroupHalf]}>
-                <Text style={styles.label}>Section</Text>
+                <Text style={styles.label}>Strand</Text>
                 <TouchableOpacity
                   style={[styles.input, styles.dropdownButton]}
-                  onPress={() => setShowSectionPicker(true)}
+                  onPress={() => setShowStrandPicker(true)}
                 >
-                  <Text style={[styles.dropdownText, formData.section && styles.dropdownTextSelected]}>
-                    {formData.section || 'Section'}
+                  <Text style={[styles.dropdownText, formData.strand && styles.dropdownTextSelected]}>
+                    {formData.strand || 'Strand'}
                   </Text>
                   <ChevronDown size={20} color="#9ca3af" />
                 </TouchableOpacity>
@@ -613,38 +613,38 @@ export function CreateStudent({ onBack, onSuccess }: CreateStudentProps) {
         </TouchableOpacity>
       </Modal>
 
-      {/* Section Picker Modal */}
+      {/* Strand Picker Modal */}
       <Modal
-        visible={showSectionPicker}
+        visible={showStrandPicker}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowSectionPicker(false)}
+        onRequestClose={() => setShowStrandPicker(false)}
       >
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
-          onPress={() => setShowSectionPicker(false)}
+          onPress={() => setShowStrandPicker(false)}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Section</Text>
+            <Text style={styles.modalTitle}>Select Strand</Text>
             <ScrollView style={styles.modalScrollView}>
-              {sections.map((section) => (
+              {strands.map((strand) => (
                 <TouchableOpacity
-                  key={section}
+                  key={strand}
                   style={[
                     styles.modalOption,
-                    formData.section === section && styles.modalOptionSelected
+                    formData.strand === strand && styles.modalOptionSelected
                   ]}
                   onPress={() => {
-                    updateField('section', section);
-                    setShowSectionPicker(false);
+                    updateField('strand', strand);
+                    setShowStrandPicker(false);
                   }}
                 >
                   <Text style={[
                     styles.modalOptionText,
-                    formData.section === section && styles.modalOptionTextSelected
+                    formData.strand === strand && styles.modalOptionTextSelected
                   ]}>
-                    {section}
+                    {strand}
                   </Text>
                 </TouchableOpacity>
               ))}
