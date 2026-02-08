@@ -30,6 +30,7 @@ import {
   Edit,
   Trash2,
   X,
+  Waves,
 } from 'lucide-react-native';
 import { adminService } from '../../src/services/api';
 import { websocketService } from '../../src/services/websocket';
@@ -680,7 +681,7 @@ export function AdminStudentDetails({ studentId, onBack }: AdminStudentDetailsPr
                   </View>
                   <Text style={styles.vitalLabel}>Temperature</Text>
                   <View style={styles.vitalValueContainer}>
-                    <Text style={styles.vitalValue}>{latestVitals.temperature}</Text>
+                    <Text style={styles.vitalValue}>{latestVitals.temperature?.toFixed(2)}</Text>
                     <Text style={styles.vitalUnit}>°C</Text>
                   </View>
                   <View
@@ -726,6 +727,42 @@ export function AdminStudentDetails({ studentId, onBack }: AdminStudentDetailsPr
                         ]}
                       >
                         {latestVitals.spO2Status}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Respiratory Rate - Always show */}
+                <View style={styles.vitalCard}>
+                  <View style={[styles.vitalIcon, { backgroundColor: '#f0fdf4' }]}>
+                    <Waves size={24} color="#16a34a" />
+                  </View>
+                  <Text style={styles.vitalLabel}>Respiratory Rate</Text>
+                  <View style={styles.vitalValueContainer}>
+                    <Text style={styles.vitalValue}>
+                      {latestVitals.respiratoryRate || '--'}
+                    </Text>
+                    <Text style={styles.vitalUnit}>/min</Text>
+                  </View>
+                  {latestVitals.respiratoryRateStatus && (
+                    <View
+                      style={[
+                        styles.vitalStatus,
+                        { backgroundColor: getStatusBgColor(latestVitals.respiratoryRateStatus) },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.vitalStatusText,
+                          { color: getStatusColor(latestVitals.respiratoryRateStatus) },
+                        ]}
+                      >
+                        {latestVitals.respiratoryRateStatus}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
                       </Text>
                     </View>
                   </View>

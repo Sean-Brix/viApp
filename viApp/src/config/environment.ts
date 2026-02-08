@@ -8,7 +8,7 @@
 
 export const ENV_CONFIG = {
   // API URLs
-  DEVELOPMENT_API_URL: 'http://192.168.100.10:3001/api',
+  DEVELOPMENT_API_URL: 'http://192.168.100.3:3001/api',
   PRODUCTION_API_URL: 'https://viapp-qq6u.onrender.com/api',
   
   // Other configs

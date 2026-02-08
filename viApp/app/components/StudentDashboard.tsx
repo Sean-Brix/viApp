@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
-import { Activity, Heart, Thermometer, Wind, AlertTriangle } from 'lucide-react-native';
+import { Activity, Heart, Thermometer, Wind, AlertTriangle, Waves } from 'lucide-react-native';
 import { studentService } from '../../src/services/api';
 import { websocketService } from '../../src/services/websocket';
 
@@ -163,7 +163,8 @@ export function StudentDashboard({ onNavigate }: StudentDashboardProps) {
       latestVitals.heartRateStatus === 'CRITICAL' ||
       latestVitals.temperatureStatus === 'CRITICAL' ||
       latestVitals.spO2Status === 'CRITICAL' ||
-      latestVitals.bloodPressureStatus === 'CRITICAL';
+      latestVitals.bloodPressureStatus === 'CRITICAL' ||
+      latestVitals.respiratoryRateStatus === 'CRITICAL';
 
     if (hasCritical) {
       return 'CRITICAL';
@@ -174,7 +175,8 @@ export function StudentDashboard({ onNavigate }: StudentDashboardProps) {
       latestVitals.heartRateStatus === 'WARNING' ||
       latestVitals.temperatureStatus === 'WARNING' ||
       latestVitals.spO2Status === 'WARNING' ||
-      latestVitals.bloodPressureStatus === 'WARNING';
+      latestVitals.bloodPressureStatus === 'WARNING' ||
+      latestVitals.respiratoryRateStatus === 'WARNING';
 
     if (hasWarning) {
       return 'NEEDS_ATTENTION';
@@ -286,7 +288,7 @@ export function StudentDashboard({ onNavigate }: StudentDashboardProps) {
                 <View style={styles.vitalInfo}>
                   <Text style={styles.vitalLabel}>Temperature</Text>
                   <View style={styles.vitalValueContainer}>
-                    <Text style={styles.vitalValue}>{latestVitals.temperature}</Text>
+                    <Text style={styles.vitalValue}>{latestVitals.temperature?.toFixed(2)}</Text>
                     <Text style={styles.vitalUnit}>°C</Text>
                   </View>
                   <View style={[styles.vitalStatus, { 
@@ -328,32 +330,32 @@ export function StudentDashboard({ onNavigate }: StudentDashboardProps) {
                 </View>
               )}
 
-              {/* Blood Pressure */}
-              {latestVitals.bloodPressureSystolic && (
-                <View style={styles.vitalCard}>
-                  <View style={[styles.vitalIcon, { backgroundColor: '#e0e7ff' }]}>
-                    <Activity size={24} color="#6366f1" />
+              {/* Respiratory Rate - Always show */}
+              <View style={styles.vitalCard}>
+                <View style={[styles.vitalIcon, { backgroundColor: '#f0fdf4' }]}>
+                  <Waves size={24} color="#16a34a" />
+                </View>
+                <View style={styles.vitalInfo}>
+                  <Text style={styles.vitalLabel}>Respiratory Rate</Text>
+                  <View style={styles.vitalValueContainer}>
+                    <Text style={styles.vitalValue}>
+                      {latestVitals.respiratoryRate || '--'}
+                    </Text>
+                    <Text style={styles.vitalUnit}>/min</Text>
                   </View>
-                  <View style={styles.vitalInfo}>
-                    <Text style={styles.vitalLabel}>Blood Pressure</Text>
-                    <View style={styles.vitalValueContainer}>
-                      <Text style={styles.vitalValue}>
-                        {latestVitals.bloodPressureSystolic}/{latestVitals.bloodPressureDiastolic}
-                      </Text>
-                      <Text style={styles.vitalUnit}>mmHg</Text>
-                    </View>
+                  {latestVitals.respiratoryRateStatus && (
                     <View style={[styles.vitalStatus, { 
-                      backgroundColor: getStatusBgColor(latestVitals.bloodPressureStatus) 
+                      backgroundColor: getStatusBgColor(latestVitals.respiratoryRateStatus) 
                     }]}>
                       <Text style={[styles.vitalStatusText, { 
-                        color: getStatusColor(latestVitals.bloodPressureStatus) 
+                        color: getStatusColor(latestVitals.respiratoryRateStatus) 
                       }]}>
-                        {latestVitals.bloodPressureStatus}
+                        {latestVitals.respiratoryRateStatus}
                       </Text>
                     </View>
-                  </View>
+                  )}
                 </View>
-              )}
+              </View>
             </View>
 
             <View style={styles.lastUpdated}>

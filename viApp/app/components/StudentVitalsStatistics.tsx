@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { ChevronLeft, TrendingUp, TrendingDown, Minus, Heart, Thermometer, Droplet, Activity as ActivityIcon } from 'lucide-react-native';
+import { ChevronLeft, TrendingUp, TrendingDown, Minus, Heart, Thermometer, Droplet, Activity as ActivityIcon, Waves } from 'lucide-react-native';
 import { studentService } from '../../src/services/api';
 
 interface StudentVitalsStatisticsProps {
@@ -63,7 +63,8 @@ export function StudentVitalsStatistics({ onBack }: StudentVitalsStatisticsProps
     icon: React.ReactNode,
     stats: any,
     unit: string,
-    normalRange: [number, number]
+    normalRange: [number, number],
+    decimals: number = 1
   ) => {
     if (!stats || stats.avg === null) {
       return (
@@ -77,9 +78,9 @@ export function StudentVitalsStatistics({ onBack }: StudentVitalsStatisticsProps
       );
     }
 
-    const avg = stats.avg.toFixed(1);
-    const min = stats.min?.toFixed(1);
-    const max = stats.max?.toFixed(1);
+    const avg = stats.avg.toFixed(decimals);
+    const min = stats.min?.toFixed(decimals);
+    const max = stats.max?.toFixed(decimals);
     const [normalMin, normalMax] = normalRange;
     const isNormal = stats.avg >= normalMin && stats.avg <= normalMax;
     const isHigh = stats.avg > normalMax;
@@ -226,7 +227,8 @@ export function StudentVitalsStatistics({ onBack }: StudentVitalsStatisticsProps
               <Thermometer size={24} color="#f59e0b" />,
               currentStats?.temperature,
               '°C',
-              [36.1, 37.2]
+              [36.1, 37.2],
+              2
             )}
 
             {renderStatCard(
@@ -237,50 +239,15 @@ export function StudentVitalsStatistics({ onBack }: StudentVitalsStatisticsProps
               [95, 100]
             )}
 
-            {currentStats?.bloodPressure?.systolic?.avg && (
-              <View style={styles.statCard}>
-                <View style={styles.statHeader}>
-                  <ActivityIcon size={24} color="#8b5cf6" />
-                  <Text style={styles.statTitle}>Blood Pressure</Text>
-                </View>
-                
-                <View style={styles.statContent}>
-                  <View style={styles.bpContainer}>
-                    <View style={styles.bpItem}>
-                      <Text style={styles.bpLabel}>Systolic (Avg)</Text>
-                      <Text style={styles.avgValue}>
-                        {currentStats.bloodPressure.systolic.avg.toFixed(0)}
-                        <Text style={styles.unit}> mmHg</Text>
-                      </Text>
-                    </View>
-                    <View style={styles.bpDivider} />
-                    <View style={styles.bpItem}>
-                      <Text style={styles.bpLabel}>Diastolic (Avg)</Text>
-                      <Text style={styles.avgValue}>
-                        {currentStats.bloodPressure.diastolic.avg.toFixed(0)}
-                        <Text style={styles.unit}> mmHg</Text>
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.rangeContainer}>
-                    <View style={styles.rangeItem}>
-                      <Text style={styles.rangeLabel}>Sys Range</Text>
-                      <Text style={styles.rangeValue}>
-                        {currentStats.bloodPressure.systolic.min.toFixed(0)} - {currentStats.bloodPressure.systolic.max.toFixed(0)} mmHg
-                      </Text>
-                    </View>
-                    <View style={styles.rangeDivider} />
-                    <View style={styles.rangeItem}>
-                      <Text style={styles.rangeLabel}>Dia Range</Text>
-                      <Text style={styles.rangeValue}>
-                        {currentStats.bloodPressure.diastolic.min.toFixed(0)} - {currentStats.bloodPressure.diastolic.max.toFixed(0)} mmHg
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
+            {renderStatCard(
+              'Respiratory Rate',
+              <Waves size={24} color="#16a34a" />,
+              currentStats?.respiratoryRate,
+              '/min',
+              [12, 20]
             )}
+
+
           </>
         )}
       </ScrollView>

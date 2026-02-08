@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { ArrowLeft, Heart, Thermometer, Wind, Activity, Calendar } from 'lucide-react-native';
+import { ArrowLeft, Heart, Thermometer, Wind, Activity, Calendar, Waves } from 'lucide-react-native';
 import { studentService } from '../../src/services/api';
 
 interface StudentVitalsHistoryProps {
@@ -131,7 +131,7 @@ export function StudentVitalsHistory({ onBack }: StudentVitalsHistoryProps) {
                     </View>
                     <View style={styles.vitalDetails}>
                       <Text style={styles.vitalLabel}>Temperature</Text>
-                      <Text style={styles.vitalValue}>{vital.temperature}°C</Text>
+                      <Text style={styles.vitalValue}>{vital.temperature?.toFixed(2)}°C</Text>
                       <View style={[styles.statusBadge, {
                         backgroundColor: getStatusBgColor(vital.temperatureStatus)
                       }]}>
@@ -146,7 +146,7 @@ export function StudentVitalsHistory({ onBack }: StudentVitalsHistoryProps) {
                 </View>
 
                 {/* Optional Vitals */}
-                {(vital.spO2 || vital.bloodPressureSystolic) && (
+                {(vital.spO2 || vital.respiratoryRate) && (
                   <View style={styles.vitalsGrid}>
                     {/* SpO2 */}
                     {vital.spO2 && (
@@ -170,24 +170,22 @@ export function StudentVitalsHistory({ onBack }: StudentVitalsHistoryProps) {
                       </View>
                     )}
 
-                    {/* Blood Pressure */}
-                    {vital.bloodPressureSystolic && (
+                    {/* Respiratory Rate */}
+                    {vital.respiratoryRate && (
                       <View style={styles.vitalItem}>
-                        <View style={[styles.vitalIcon, { backgroundColor: '#e0e7ff' }]}>
-                          <Activity size={20} color="#6366f1" />
+                        <View style={[styles.vitalIcon, { backgroundColor: '#f0fdf4' }]}>
+                          <Waves size={20} color="#16a34a" />
                         </View>
                         <View style={styles.vitalDetails}>
-                          <Text style={styles.vitalLabel}>Blood Pressure</Text>
-                          <Text style={styles.vitalValue}>
-                            {vital.bloodPressureSystolic}/{vital.bloodPressureDiastolic}
-                          </Text>
+                          <Text style={styles.vitalLabel}>Respiratory Rate</Text>
+                          <Text style={styles.vitalValue}>{vital.respiratoryRate}/min</Text>
                           <View style={[styles.statusBadge, {
-                            backgroundColor: getStatusBgColor(vital.bloodPressureStatus)
+                            backgroundColor: getStatusBgColor(vital.respiratoryRateStatus)
                           }]}>
                             <Text style={[styles.statusText, {
-                              color: getStatusColor(vital.bloodPressureStatus)
+                              color: getStatusColor(vital.respiratoryRateStatus)
                             }]}>
-                              {vital.bloodPressureStatus}
+                              {vital.respiratoryRateStatus}
                             </Text>
                           </View>
                         </View>

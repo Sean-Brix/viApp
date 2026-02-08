@@ -205,21 +205,7 @@ export function Dashboard({
                       { color: getVitalStatusColor(student.vitals.temperature.status) },
                     ]}
                   >
-                    {student.vitals.temperature.value}{student.vitals.temperature.unit}
-                  </Text>
-                </View>
-
-                <View style={styles.vitalItem}>
-                  <Activity size={16} color="#8b5cf6" />
-                  <Text style={styles.vitalLabel}>BP</Text>
-                  <Text
-                    style={[
-                      styles.vitalValue,
-                      { color: getVitalStatusColor(student.vitals.bloodPressureSystolic.status) },
-                    ]}
-                  >
-                    {student.vitals.bloodPressureSystolic.value}/
-                    {student.vitals.bloodPressureDiastolic.value}
+                    {parseFloat(student.vitals.temperature.value).toFixed(2)}{student.vitals.temperature.unit}
                   </Text>
                 </View>
               </View>

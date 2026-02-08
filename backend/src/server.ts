@@ -142,8 +142,8 @@ const server = httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`🏥 Health Check: http://localhost:${PORT}/health`);
   console.log(`📚 API Docs: http://localhost:${PORT}/api`);
   console.log(`🧪 API Tester: http://localhost:${PORT}/ or http://localhost:${PORT}/api-tester`);
-  console.log(`🌐 Network: http://192.168.100.10:${PORT}/api`);
-  console.log(`⚡ WebSocket: ws://192.168.100.10:${PORT}\n`);
+  console.log(`🌐 Network: http://192.168.100.3:${PORT}/api`);
+  console.log(`⚡ WebSocket: ws://192.168.100.3:${PORT}\n`);
 });
 
 // Handle uncaught errors

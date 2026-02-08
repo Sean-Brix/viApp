@@ -40,6 +40,7 @@ export class VitalService {
     bloodPressureSystolic?: number;
     bloodPressureDiastolic?: number;
     batteryLevel?: number;
+    respiratoryRate?: number;
   }) {
     // Find device and associated student
     const device = await prisma.device.findUnique({
@@ -73,6 +74,7 @@ export class VitalService {
       spO2: data.spO2,
       bloodPressureSystolic: data.bloodPressureSystolic,
       bloodPressureDiastolic: data.bloodPressureDiastolic,
+      respiratoryRate: data.respiratoryRate,
       isManualEntry: false,
     });
 

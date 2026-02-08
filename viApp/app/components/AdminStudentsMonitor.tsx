@@ -9,7 +9,7 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
-import { ChevronLeft, Heart, Thermometer, Droplet, Activity as ActivityIcon, Battery, Smartphone, UserX } from 'lucide-react-native';
+import { ChevronLeft, Heart, Thermometer, Droplet, Activity as ActivityIcon, Battery, Smartphone, UserX, Waves } from 'lucide-react-native';
 import { adminService, type StudentListItem } from '../../src/services/api';
 import { websocketService } from '../../src/services/websocket';
 
@@ -19,6 +19,7 @@ interface Student extends StudentListItem {
     heartRate?: number;
     temperature?: number;
     spO2?: number;
+    respiratoryRate?: number;
     bloodPressureSystolic?: number;
     bloodPressureDiastolic?: number;
     timestamp: string;
@@ -67,6 +68,7 @@ export function AdminStudentsMonitor({ onBack, onAssignDevice }: AdminStudentsMo
               heartRate: data.data.heartRate,
               temperature: data.data.temperature,
               spO2: data.data.spO2,
+              respiratoryRate: data.data.respiratoryRate,
               bloodPressureSystolic: data.data.bloodPressureSystolic,
               bloodPressureDiastolic: data.data.bloodPressureDiastolic,
               timestamp: data.data.recordedAt || data.timestamp,
@@ -190,7 +192,7 @@ export function AdminStudentsMonitor({ onBack, onAssignDevice }: AdminStudentsMo
     return `${diffDays}d ago`;
   };
 
-  const renderVitalStatus = (label: string, value: number | undefined, icon: React.ReactNode, unit: string, normalRange: [number, number]) => {
+  const renderVitalStatus = (label: string, value: number | undefined, icon: React.ReactNode, unit: string, normalRange: [number, number], decimals: number = 0) => {
     if (value === undefined || value === null) {
       return (
         <View style={styles.vitalBox}>
@@ -207,6 +209,8 @@ export function AdminStudentsMonitor({ onBack, onAssignDevice }: AdminStudentsMo
     const isHigh = value > max;
     const isLow = value < min;
 
+    const formattedValue = decimals > 0 ? value.toFixed(decimals) : value;
+
     return (
       <View style={[
         styles.vitalBox,
@@ -221,7 +225,7 @@ export function AdminStudentsMonitor({ onBack, onAssignDevice }: AdminStudentsMo
           isNormal && styles.vitalValueNormal,
           isHigh && styles.vitalValueHigh,
           isLow && styles.vitalValueLow,
-        ]}>{value}</Text>
+        ]}>{formattedValue}</Text>
         <Text style={styles.vitalUnit}>{unit}</Text>
       </View>
     );
@@ -337,7 +341,8 @@ export function AdminStudentsMonitor({ onBack, onAssignDevice }: AdminStudentsMo
                         latestVital.temperature,
                         <Thermometer size={20} color="#f59e0b" />,
                         '°C',
-                        [36.1, 37.2]
+                        [36.1, 37.2],
+                        2
                       )}
                       {renderVitalStatus(
                         'SpO₂',
@@ -345,6 +350,13 @@ export function AdminStudentsMonitor({ onBack, onAssignDevice }: AdminStudentsMo
                         <Droplet size={20} color="#3b82f6" />,
                         '%',
                         [95, 100]
+                      )}
+                      {renderVitalStatus(
+                        'Resp. Rate',
+                        latestVital.respiratoryRate,
+                        <Waves size={20} color="#16a34a" />,
+                        '/min',
+                        [12, 20]
                       )}
                     </View>
                     <Text style={styles.lastUpdate}>

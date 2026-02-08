@@ -141,7 +141,8 @@ export class StudentService {
 
       const heartRates = vitals.map(v => v.heartRate).filter(v => v != null);
       const temps = vitals.map(v => v.temperature).filter(v => v != null);
-      const spo2s = vitals.map(v => v.bloodOxygen).filter(v => v != null);
+      const spo2s = vitals.map(v => v.spO2).filter(v => v != null);
+      const respiratoryRates = vitals.map(v => v.respiratoryRate).filter(v => v != null);
       const bpSys = vitals.map(v => v.bloodPressureSystolic).filter(v => v != null);
       const bpDia = vitals.map(v => v.bloodPressureDiastolic).filter(v => v != null);
 
@@ -165,6 +166,11 @@ export class StudentService {
           avg: avg(spo2s),
           min: min(spo2s),
           max: max(spo2s),
+        },
+        respiratoryRate: {
+          avg: avg(respiratoryRates),
+          min: min(respiratoryRates),
+          max: max(respiratoryRates),
         },
         bloodPressure: {
           systolic: { avg: avg(bpSys), min: min(bpSys), max: max(bpSys) },

@@ -18,7 +18,7 @@ export const esp32UploadVital = async (req: Request, res: Response, next: NextFu
   console.log('🚨 ====================================');
   
   try {
-    const { deviceId, heartRate, temperature, spO2, bloodPressureSystolic, bloodPressureDiastolic, batteryLevel } = req.body;
+    const { deviceId, heartRate, temperature, spO2, bloodPressureSystolic, bloodPressureDiastolic, batteryLevel, respiratoryRate } = req.body;
 
     if (!deviceId) {
       return sendError(res, 'Device ID is required', 400);
@@ -36,7 +36,8 @@ export const esp32UploadVital = async (req: Request, res: Response, next: NextFu
       spO2,
       bloodPressureSystolic,
       bloodPressureDiastolic,
-      batteryLevel
+      batteryLevel,
+      respiratoryRate
     });
 
     // Emit real-time update via WebSocket
@@ -60,6 +61,7 @@ export const esp32UploadVital = async (req: Request, res: Response, next: NextFu
         spO2: result.vital.spO2,
         bloodPressureSystolic: result.vital.bloodPressureSystolic,
         bloodPressureDiastolic: result.vital.bloodPressureDiastolic,
+        respiratoryRate: result.vital.respiratoryRate,
         recordedAt: result.vital.timestamp,
       });
     } else {
@@ -95,6 +97,7 @@ export const uploadVital = async (req: AuthRequest, res: Response, next: NextFun
         spO2: result.vital.spO2,
         bloodPressureSystolic: result.vital.bloodPressureSystolic,
         bloodPressureDiastolic: result.vital.bloodPressureDiastolic,
+        respiratoryRate: result.vital.respiratoryRate,
         recordedAt: result.vital.timestamp,
       });
     }

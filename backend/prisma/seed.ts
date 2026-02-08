@@ -143,6 +143,36 @@ async function main() {
   });
   console.log(`✅ Created ${devices.count} devices`);
 
+  // Create sample vitals with respiratory rate for testing
+  const students = await prisma.student.findMany();
+  for (const student of students) {
+    await prisma.vital.create({
+      data: {
+        studentId: student.id,
+        deviceId: 'ESP32-001',
+        heartRate: 72 + Math.floor(Math.random() * 16), // 72-88
+        heartRateStatus: 'NORMAL',
+        heartRateTrend: 'STABLE',
+        temperature: 36.5 + Math.random() * 0.5, // 36.5-37.0
+        temperatureStatus: 'NORMAL',
+        temperatureTrend: 'STABLE',
+        spO2: 96 + Math.floor(Math.random() * 4), // 96-99
+        spO2Status: 'NORMAL',
+        spO2Trend: 'STABLE',
+        respiratoryRate: 14 + Math.floor(Math.random() * 4), // 14-17
+        respiratoryRateStatus: 'NORMAL',
+        respiratoryRateTrend: 'STABLE',
+        bloodPressureSystolic: 110 + Math.floor(Math.random() * 10), // 110-119
+        bloodPressureDiastolic: 70 + Math.floor(Math.random() * 10), // 70-79
+        bloodPressureStatus: 'NORMAL',
+        bloodPressureTrend: 'STABLE',
+        timestamp: new Date(),
+        isManualEntry: false,
+      },
+    });
+  }
+  console.log(`✅ Created sample vitals with respiratory rate for ${students.length} students`);
+
   console.log('\n✨ Database seeded successfully!');
   console.log('\n📝 Default credentials:');
   console.log('   Admin: username=admin, password=admin123');

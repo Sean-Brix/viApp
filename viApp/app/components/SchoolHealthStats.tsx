@@ -93,7 +93,7 @@ export function SchoolHealthStats({ onBack }: SchoolHealthStatsProps) {
         period: 'day',
         totalReadings: count,
         averageHeartRate: count > 0 ? Math.round(totalHeartRate / count) : 0,
-        averageTemperature: count > 0 ? Number((totalTemp / count).toFixed(1)) : 0,
+        averageTemperature: count > 0 ? Number((totalTemp / count).toFixed(2)) : 0,
         averageSpO2: count > 0 ? Math.round(totalSpO2 / count) : 0,
         averageBP: {
           systolic: count > 0 ? Math.round(totalSystolic / count) : 0,
@@ -236,16 +236,6 @@ export function SchoolHealthStats({ onBack }: SchoolHealthStatsProps) {
                 <Text style={styles.vitalValue}>{stats.averageSpO2}%</Text>
                 <View style={styles.vitalRange}>
                   <Text style={styles.rangeText}>Normal: 95-100%</Text>
-                </View>
-              </View>
-
-              <View style={styles.vitalCard}>
-                <Text style={styles.vitalName}>Blood Pressure</Text>
-                <Text style={styles.vitalValue}>
-                  {stats.averageBP.systolic}/{stats.averageBP.diastolic} mmHg
-                </Text>
-                <View style={styles.vitalRange}>
-                  <Text style={styles.rangeText}>Normal: 90-120 / 60-80 mmHg</Text>
                 </View>
               </View>
             </View>
